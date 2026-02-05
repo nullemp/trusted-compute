@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  mariadb:
+    image: mariadb:11
+    container_name: trusted-compute-db
+    environment:
+      MARIADB_ROOT_PASSWORD: root_pass
+      MARIADB_DATABASE: trusted_compute_db
+      MARIADB_USER: trusted_compute
+      MARIADB_PASSWORD: trusted_compute_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 仅用于构建沙箱镜像，不常驻运行；任务执行时由 backend 用 docker run --rm 启动
+  sandbox:
+    build:
+      context: ./backend/sandbox
+      dockerfile: Dockerfile
+      args:
+        PYTHON_IMAGE: ${PYTHON_IMAGE:-python:3.11-slim}
+    image: trusted-compute-sandbox
+    command: ["true"]
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        PYTHON_IMAGE: ${PYTHON_IMAGE:-python:3.11-slim}
+    container_name: trusted-compute-backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: mysql+pymysql://trusted_compute:trusted_compute_pass@mariadb:3306/trusted_compute_db
+      SECRET_KEY: your-secret-key-change-in-production
+      SANDBOX_IMAGE: trusted-compute-sandbox
+    volumes:
+      - ./backend:/app
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NODE_IMAGE: ${NODE_IMAGE:-node:18-alpine}
+    container_name: trusted-compute-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      REACT_APP_API_URL: http://localhost:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  mariadb_data:
