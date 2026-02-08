@@ -1,9 +1,11 @@
 version: '3.8'
 
 services:
+  # 数据库：MariaDB（应用表与业务数据均存于此）
   mariadb:
-    image: mariadb:11
+    image: ${MARIADB_IMAGE:-mariadb:11}
     container_name: trusted-compute-db
+    command: ["mariadbd", "--local-infile=1"]  # 文件上传入库（LOAD DATA LOCAL INFILE）需开启
     environment:
       MARIADB_ROOT_PASSWORD: root_pass
       MARIADB_DATABASE: trusted_compute_db
@@ -42,6 +44,7 @@ services:
       DATABASE_URL: mysql+pymysql://trusted_compute:trusted_compute_pass@mariadb:3306/trusted_compute_db
       SECRET_KEY: your-secret-key-change-in-production
       SANDBOX_IMAGE: trusted-compute-sandbox
+      CONTAINER_RUNTIME: ${CONTAINER_RUNTIME:-docker}
     volumes:
       - ./backend:/app
       - /var/run/docker.sock:/var/run/docker.sock
@@ -50,7 +53,10 @@ services:
         condition: service_healthy
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
+  # 仅在使用前端时启动：docker-compose --profile frontend up
   frontend:
+    profiles:
+      - frontend
     build:
       context: ./frontend
       dockerfile: Dockerfile

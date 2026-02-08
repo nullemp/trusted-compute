@@ -1,7 +1,17 @@
 from pydantic import BaseModel, Field
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Union
 from datetime import datetime
 from models import ProjectStatus, ParticipantStatus, TaskStatus
+
+
+# ==================== 直接执行 SQL（无项目/任务）====================
+
+class ExecuteSqlRequest(BaseModel):
+    """接收数据 + SQL：数据插入 MariaDB 临时表后执行 SQL，返回结果（支持大数据量）。"""
+    data: List[Union[List[Any], Dict[str, Any]]] = Field(..., description="表数据：每行可为 list 或 dict")
+    sql: str = Field(..., description="要执行的 SQL，可查询插入后的表（默认表名 input_data）")
+    table_name: Optional[str] = Field("input_data", description="临时表名，仅字母数字下划线")
+    columns: Optional[List[str]] = Field(None, description="列名；当 data 为 list 时必填，为 list of dict 时可从首行推断")
 
 
 # ==================== 项目相关 ====================

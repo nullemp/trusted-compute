@@ -1,3 +1,4 @@
+from . import execute_sql_service
 from .project_service import ProjectService
 from .task_service import TaskService
 from .sandbox_service import SandboxService

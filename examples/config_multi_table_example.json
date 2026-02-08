@@ -1,0 +1,17 @@
+{
+  "tables": [
+    {
+      "table_name": "orders",
+      "ddl": "id INT, user_id INT, amount DECIMAL(10,2), created_at DATE",
+      "has_header": true,
+      "delimiter": ","
+    },
+    {
+      "table_name": "users",
+      "ddl": "id INT, name VARCHAR(100)",
+      "has_header": true,
+      "delimiter": ","
+    }
+  ],
+  "sql": "SELECT u.name, SUM(o.amount) AS total FROM orders o JOIN users u ON o.user_id = u.id GROUP BY u.name"
+}

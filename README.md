@@ -81,6 +81,18 @@
 
 ## 快速开始
 
+**想一次性跑通 Demo（起服务 + 调 API）**：见 **[DEMO_完整流程.md](DEMO_完整流程.md)**，按步骤执行即可。
+
+### 从 GitHub 克隆后能否直接用？
+
+- **代码**：克隆/拉取后就有，无需再“下载项目”。
+- **运行环境**：在新机器或隔天第一次用，通常还需要准备一次（以后同一台机器一般不用重复）：
+  - **有 Docker**：在项目根目录执行 `docker-compose up -d --build`，首次会拉取/构建镜像（需网络）。
+  - **无 Docker（Windows）**：用 `.\scripts\start-for-client.cmd` 时，若本机无 Podman，脚本会引导下载到 `runtime/` 或使用系统 Docker；详见 [docs/START_FOR_CLIENT_SUMMARY.md](docs/START_FOR_CLIENT_SUMMARY.md)。
+  - **客户端测试**：`client-simulator` 需本机有 Python，并执行 `pip install -r client-simulator/requirements.txt`（首次一次即可）。
+
+总结：**项目本身不用重新下载；依赖（镜像、Python 包、可选 runtime）在新环境第一次跑时会拉取/安装，之后可直接用。**
+
 ### 使用Docker Compose启动
 
 ```bash
@@ -99,6 +111,10 @@ docker-compose down
 - **前端界面**：http://localhost:3000
 - **后端API**：http://localhost:8000
 - **API文档**：http://localhost:8000/docs
+
+### 客户环境无 Docker
+
+若客户机不装 Docker、仅由客户端进程调用 API（无需前端），请见 **[DEPLOY_CLIENT_NO_DOCKER.md](DEPLOY_CLIENT_NO_DOCKER.md)**（部署）与 **[CLIENT_API.md](CLIENT_API.md)**（接口说明）。需安装 MariaDB + Python，设置 `SANDBOX_MODE=local` 后只启动后端即可。
 
 ## 功能模块
 
