@@ -1,6 +1,6 @@
 # Client integration: run from project root. Start backend + MariaDB with Podman or Docker (no frontend).
 # Prefer bundled runtime under project runtime/ then PATH (Podman before Docker).
-# On Windows with Podman, ensures WSL is installed (and Podman Machine) so customer does not need to configure manually.
+# On Windows with Podman, ensure WSL and Podman Machine are ready so users do not need to configure them manually.
 $ErrorActionPreference = "Stop"
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $ProjectRoot
@@ -9,7 +9,7 @@ function Test-WslReady {
     # 1) If "wsl -e echo 0" works, WSL can run commands (distro is usable) -> ready
     $null = cmd /c "wsl -e echo 0 2>nul"
     if ($LASTEXITCODE -eq 0) { return $true }
-    # 2) Else check wsl -l -v: exit 0 and has a distro line (not "no installed distribution")
+    # 2) Else check "wsl -l -v": if exit code is 0 and there is at least one distro line (and not "no installed distribution"), WSL is considered ready
     $out = cmd /c "wsl -l -v 2>nul"
     if ($LASTEXITCODE -ne 0) { return $false }
     if ($out -match "no installed distribution|没有已安装的分发|No installed") { return $false }
@@ -21,22 +21,9 @@ function Install-WslIfNeeded {
         Remove-Item (Join-Path $env:TEMP "trusted-compute-wsl-install-started.txt") -Force -ErrorAction SilentlyContinue
         return $true
     }
-    $marker = Join-Path $env:TEMP "trusted-compute-wsl-install-started.txt"
-    $forceRetry = ($env:TRUSTED_COMPUTE_WSL_RETRY -eq "1")
-    if ($forceRetry) { Remove-Item $marker -Force -ErrorAction SilentlyContinue }
-    # If we already ran the installer (marker exists), do not block: continue and let Podman try; if it fails we show one message below.
-    if ((Test-Path $marker) -and -not $forceRetry) {
-        return $true
-    }
-    Write-Host "WSL is required for Podman. Installing (UAC may appear; click Yes)..."
-    try {
-        Start-Process -FilePath "wsl.exe" -ArgumentList "--install", "--no-launch" -Verb RunAs -Wait
-    } catch {
-        Start-Process -FilePath "wsl.exe" -ArgumentList "--install" -Verb RunAs -Wait
-    }
-    New-Item -Path $marker -ItemType File -Force | Out-Null
-    Write-Host "If the system asked to RESTART, restart the PC then run this script again. Otherwise run again in a moment." -ForegroundColor Cyan
-    exit 0
+    Write-Host "WSL is required for Podman on Windows, but this offline package will NOT automatically install WSL." -ForegroundColor Yellow
+    Write-Host "Please enable WSL (with at least one Linux distribution such as Ubuntu) when building your offline environment, then run scripts/start-for-client.cmd again." -ForegroundColor Yellow
+    return $false
 }
 
 function Ensure-DockerComposeForPodman {
@@ -47,30 +34,9 @@ function Ensure-DockerComposeForPodman {
         $len = (Get-Item $ComposeExe).Length
         if ($len -gt 1MB) { return $ComposeExe }
     }
-    Write-Host "Downloading docker-compose to $ComposeDir ..."
-    New-Item -ItemType Directory -Path $ComposeDir -Force | Out-Null
-    $version = "v2.24.0"
-    $fileName = "docker-compose-windows-x86_64.exe"
-    $urls = @(
-        "https://github.com/docker/compose/releases/download/$version/$fileName",
-        "https://ghproxy.com/https://github.com/docker/compose/releases/download/$version/$fileName",
-        "https://mirror.ghproxy.com/https://github.com/docker/compose/releases/download/$version/$fileName",
-        "https://github.com/docker/compose/releases/download/v2.23.0/$fileName"
-    )
-    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    foreach ($url in $urls) {
-        try {
-            Invoke-WebRequest -Uri $url -OutFile $ComposeExe -UseBasicParsing -MaximumRedirection 5 -TimeoutSec 90
-            if ((Test-Path $ComposeExe) -and (Get-Item $ComposeExe).Length -gt 1MB) { return $ComposeExe }
-        } catch {
-            Remove-Item $ComposeExe -Force -ErrorAction SilentlyContinue
-        }
-    }
     Write-Host ""
-    Write-Host "Download failed (network/timeout). Save docker-compose manually:" -ForegroundColor Yellow
-    Write-Host "  1. Open: https://github.com/docker/compose/releases" -ForegroundColor Gray
-    Write-Host "  2. Download: docker-compose-windows-x86_64.exe" -ForegroundColor Gray
-    Write-Host "  3. Rename to docker-compose.exe and put in: $ComposeDir" -ForegroundColor Gray
+    Write-Host "docker-compose.exe was not found in $ComposeDir, and this offline package will NOT download it automatically." -ForegroundColor Yellow
+    Write-Host "Please download docker-compose-windows-x86_64.exe in an online environment, rename it to docker-compose.exe, and place it into $ComposeDir before running this script." -ForegroundColor Yellow
     Write-Host ""
     return $null
 }

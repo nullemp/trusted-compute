@@ -73,7 +73,6 @@
 ## 技术栈
 
 - **后端**：Python FastAPI
-- **前端**：React + TypeScript
 - **数据库**：MariaDB
 - **沙箱执行**：Docker 容器隔离（每次任务新建容器，执行完即销毁）
 - **加密**：AES-256加密
@@ -108,9 +107,10 @@ docker-compose down
 
 ### 访问服务
 
-- **前端界面**：http://localhost:3000
 - **后端API**：http://localhost:8000
 - **API文档**：http://localhost:8000/docs
+
+> 说明：当前仓库已移除 Web 前端界面，推荐直接通过后端 API 或 `client-simulator` 客户端脚本进行集成与测试。
 
 ### 客户环境无 Docker
 
