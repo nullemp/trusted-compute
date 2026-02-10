@@ -29,14 +29,11 @@ yarn-error.log*
 # Docker
 *.log
 
-# Bundled container runtime (binaries; README is tracked)
-runtime/*
-!runtime/README.md
-
 # Database
 *.db
 *.sqlite
 
-# Large archives (exceed GitHub 100MB limit)
-*.tar
-mariadb-11.tar
+# Runtime (large binaries; use scripts/pull-images or installers, do not commit)
+runtime/images/*.tar
+runtime/docker/
+runtime/podman/

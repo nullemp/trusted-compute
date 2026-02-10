@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 import json
 import os
+import time
 import uvicorn
 
 from database import engine, get_db, Base
@@ -323,8 +324,32 @@ async def execute_task(
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     
-    # 2. Execute in sandbox
-    raw_result = sandbox_service.execute_task(db, task, execute_request.input_params)
+    # 2. Execute: SQL (with data) in MariaDB; SQL (no data) mock; Python in sandbox
+    if task.model_type == "sql":
+        params = execute_request.input_params or {}
+        data = params.get("data")
+        if data:
+            start = time.time()
+            raw_result = execute_sql_service.execute_sql_mariadb(
+                data=data,
+                sql=task.model_code,
+                table_name=params.get("table_name") or "input_data",
+                columns=params.get("columns"),
+            )
+            raw_result["execution_time"] = int(time.time() - start)
+        else:
+            raw_result = {
+                "type": "sql",
+                "status": "success",
+                "result": {
+                    "columns": ["id", "value", "category"],
+                    "data": [[1, 100, "A"], [2, 200, "B"], [3, 150, "A"], [4, 300, "C"]],
+                    "row_count": 4,
+                },
+                "execution_time": 0,
+            }
+    else:
+        raw_result = sandbox_service.execute_task(db, task, execute_request.input_params)
     
     execution_time = raw_result.pop("execution_time", None)
     
