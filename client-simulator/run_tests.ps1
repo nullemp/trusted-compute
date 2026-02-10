@@ -2,7 +2,7 @@
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
 
-# 确保 Python 输出 UTF-8，避免 PowerShell 下中文/JSON 不显示
+# Ensure Python outputs UTF-8 so JSON displays in PowerShell
 $env:PYTHONIOENCODING = "utf-8"
 
 Write-Host "=== Waiting for API ==="

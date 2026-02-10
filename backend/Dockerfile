@@ -1,15 +1,15 @@
-# 国内拉取失败时可传构建参数：--build-arg PYTHON_IMAGE=docker.m.daocloud.io/library/python:3.11-slim
+# If pull fails in China, pass: --build-arg PYTHON_IMAGE=docker.m.daocloud.io/library/python:3.11-slim
 ARG PYTHON_IMAGE=python:3.11-slim
 FROM ${PYTHON_IMAGE}
 
 WORKDIR /app
 
-# 使用国内 Debian 源（兼容 sources.list 与 sources.list.d/debian.sources）
+# Use Debian mirror (compatible with sources.list and sources.list.d/debian.sources)
 RUN for f in /etc/apt/sources.list /etc/apt/sources.list.d/debian.sources; do \
       test -f "$f" && sed -i 's|deb.debian.org|mirrors.aliyun.com|g' "$f" && sed -i 's|security.debian.org/debian-security|mirrors.aliyun.com/debian-security|g' "$f"; \
     done
 
-# 只装 curl + ca-certificates，再下载 Docker CLI（不装 gcc，避免大包拉取失败）
+# Install curl + ca-certificates only, then download Docker CLI (no gcc to keep image small)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     curl \

@@ -31,9 +31,9 @@ class ProjectService:
         """加入项目（审批加入请求）"""
         project = self.get_project(db, project_id)
         if not project:
-            raise ValueError("项目不存在")
+            raise ValueError("Project not found")
 
-        # 检查是否已经加入
+        # Check if already joined
         existing = db.query(Participant).filter(
             Participant.project_id == project_id,
             Participant.participant_id == request.participant_id
@@ -41,14 +41,12 @@ class ProjectService:
 
         if existing:
             if existing.status == ParticipantStatus.APPROVED:
-                raise ValueError("已经加入该项目")
-            # 更新请求
+                raise ValueError("Already joined this project")
             existing.participant_name = request.participant_name
             existing.data_resource = request.data_resource
             existing.status = ParticipantStatus.APPROVED
             existing.joined_at = datetime.utcnow()
         else:
-            # 创建新的参与者记录
             participant = Participant(
                 project_id=project_id,
                 participant_id=request.participant_id,

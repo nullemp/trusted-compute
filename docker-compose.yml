@@ -1,11 +1,11 @@
 version: '3.8'
 
 services:
-  # 数据库：MariaDB（应用表与业务数据均存于此）
+  # Database: MariaDB (application tables and business data)
   mariadb:
     image: ${MARIADB_IMAGE:-mariadb:11}
     container_name: trusted-compute-db
-    command: ["mariadbd", "--local-infile=1"]  # 文件上传入库（LOAD DATA LOCAL INFILE）需开启
+    command: ["mariadbd", "--local-infile=1"]  # Required for LOAD DATA LOCAL INFILE (file upload into DB)
     environment:
       MARIADB_ROOT_PASSWORD: root_pass
       MARIADB_DATABASE: trusted_compute_db
@@ -21,7 +21,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # 仅用于构建沙箱镜像，不常驻运行；任务执行时由 backend 用 docker run --rm 启动
+  # Build sandbox image only; not long-running. Backend starts it with docker run --rm per task
   sandbox:
     build:
       context: ./backend/sandbox

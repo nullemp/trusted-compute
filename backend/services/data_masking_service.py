@@ -50,23 +50,19 @@ class DataMaskingService:
         return masked
 
     def _apply_rule(self, value: Any, rule: str) -> Any:
-        """应用脱敏规则"""
+        """Apply masking rule"""
         if rule == "mask_all":
-            # 完全掩码
             if isinstance(value, str):
                 return "***"
             return None
         elif rule == "mask_partial":
-            # 部分掩码（保留前后几位）
             if isinstance(value, str):
                 if len(value) <= 4:
                     return "****"
                 return value[:2] + "****" + value[-2:]
             return value
         elif rule == "generalize":
-            # 泛化处理
             if isinstance(value, (int, float)):
-                # 数值泛化到范围
                 if isinstance(value, int):
                     base = (value // 10) * 10
                     return f"{base}-{base+9}"
@@ -75,7 +71,6 @@ class DataMaskingService:
                     return f"{base}-{base+9}"
             return value
         elif rule == "hash":
-            # 哈希处理
             import hashlib
             if isinstance(value, str):
                 return hashlib.sha256(value.encode()).hexdigest()[:16]

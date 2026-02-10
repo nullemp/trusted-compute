@@ -26,12 +26,12 @@ from services import (
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
-    title="可信模型计算平台 API",
+    title="Trusted Compute Platform API",
     description="Trusted Compute Platform API",
     version="1.0.0"
 )
 
-# CORS middleware（集成到客户端同源访问时可收紧 allow_origins）
+# CORS middleware (tighten allow_origins when integrating with same-origin client)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -42,13 +42,13 @@ app.add_middleware(
 
 
 
-# ==================== 直接执行 SQL（无项目/任务，脚本调用）====================
+# ==================== Direct SQL execution (no project/task, script call) ====================
 
 @app.post("/api/execute-sql")
 async def execute_sql(req: ExecuteSqlRequest):
     """
-    接收数据 + SQL：将数据插入 MariaDB 临时表后执行 SQL，返回结果。
-    支持大数据量（临时表在库中，不占应用内存）。不创建项目/任务。
+    Accept data + SQL: insert data into MariaDB temp table, run SQL, return result.
+    Supports large data (temp table in DB, no app memory). Does not create project/task.
     """
     result = execute_sql_service.execute_sql_mariadb(
         data=req.data,
@@ -61,17 +61,17 @@ async def execute_sql(req: ExecuteSqlRequest):
 
 @app.post("/api/execute-sql/file")
 async def execute_sql_file(
-    file: UploadFile = File(..., description="CSV 文件（支持亿行级，由 MariaDB LOAD DATA 入库）"),
-    sql: str = Form(..., description="导入后要执行的 SQL，可查询表 input_data"),
-    table_name: str = Form("input_data", description="临时表名"),
-    has_header: bool = Form(True, description="首行是否为列名"),
-    delimiter: str = Form(",", description="列分隔符，单字符"),
-    columns: Optional[str] = Form(None, description="列名，逗号分隔；不填则从首行推断（无 DDL 时）"),
-    ddl: Optional[str] = Form(None, description="表结构：CREATE TABLE 括号内部分，如 id INT, value DECIMAL(10,2), name VARCHAR(100)；CSV 列顺序须与 DDL 一致"),
+    file: UploadFile = File(..., description="CSV file (large scale via MariaDB LOAD DATA)"),
+    sql: str = Form(..., description="SQL to run after import; can query table input_data"),
+    table_name: str = Form("input_data", description="Temporary table name"),
+    has_header: bool = Form(True, description="First row is header"),
+    delimiter: str = Form(",", description="Column delimiter, single char"),
+    columns: Optional[str] = Form(None, description="Column names, comma-separated; optional, inferred from first row if no DDL"),
+    ddl: Optional[str] = Form(None, description="Table DDL: CREATE TABLE body, e.g. id INT, value DECIMAL(10,2); CSV column order must match DDL"),
 ):
     """
-    上传 CSV + SQL：用 MariaDB LOAD DATA LOCAL INFILE 导入临时表后执行 SQL。
-    不将文件读入应用内存，支持亿行级数据。可选传 ddl 指定列名与类型，不传则从首行推断且列为 TEXT。
+    Upload CSV + SQL: import into temp table via MariaDB LOAD DATA LOCAL INFILE, then run SQL.
+    File not loaded into app memory; supports very large data. Optional ddl for column types; else inferred as TEXT.
     """
     upload_dir = execute_sql_service.UPLOAD_DIR
     os.makedirs(upload_dir, exist_ok=True)
@@ -105,32 +105,32 @@ async def execute_sql_file(
 
 @app.post("/api/execute-sql/files")
 async def execute_sql_files(
-    config: Optional[str] = Form(None, description='JSON 字符串；也可用 config_file 上传 JSON 文件'),
-    config_file: Optional[UploadFile] = File(None, description="或上传 JSON 文件作为 config（curl -F config=@xxx.json 时用）"),
-    ddl_file: Optional[UploadFile] = File(None, description="可选：从数据库导出的 DDL 文件（如 schema.sql），表结构以此为准，覆盖 config 中的 ddl"),
-    files: List[UploadFile] = File(..., description="多个 CSV，顺序与 config.tables 一致"),
+    config: Optional[str] = Form(None, description='JSON string; or upload JSON via config_file'),
+    config_file: Optional[UploadFile] = File(None, description="Or upload JSON file as config (e.g. curl -F config=@xxx.json)"),
+    ddl_file: Optional[UploadFile] = File(None, description="Optional: DDL file from DB (e.g. schema.sql); overrides config ddl"),
+    files: List[UploadFile] = File(..., description="Multiple CSVs, order matches config.tables"),
 ):
     """
-    多表上传：多个 CSV 分别导入多个临时表（同连接），再执行一条 SQL（可连表）。
-    config.tables[i] 对应 files[i]。每表可指定 table_name、ddl、has_header、delimiter、columns。
-    若上传 ddl_file（从数据库导出的 schema.sql），则用其解析出的表定义覆盖 config 中对应表的 ddl。
+    Multi-table upload: import each CSV into a temp table (same connection), then run one SQL (can join).
+    config.tables[i] maps to files[i]. Per-table: table_name, ddl, has_header, delimiter, columns.
+    If ddl_file (e.g. schema.sql) is uploaded, its table definitions override config ddl.
     """
     if config_file and config_file.filename:
         config = (await config_file.read()).decode("utf-8", errors="replace")
     if not config or not config.strip():
-        return {"status": "error", "error": "请提供 config（Form 字符串）或 config_file（JSON 文件）"}
+        return {"status": "error", "error": "Provide config (Form string) or config_file (JSON file)"}
     try:
         conf = json.loads(config)
     except Exception as e:
-        return {"status": "error", "error": f"config 非合法 JSON: {e}"}
+        return {"status": "error", "error": f"config is not valid JSON: {e}"}
     tables = conf.get("tables")
     sql = conf.get("sql")
     if not isinstance(tables, list) or not tables:
-        return {"status": "error", "error": "config 需包含 tables 数组且非空"}
+        return {"status": "error", "error": "config must contain non-empty tables array"}
     if not sql or not isinstance(sql, str):
-        return {"status": "error", "error": "config 需包含 sql 字符串"}
+        return {"status": "error", "error": "config must contain sql string"}
     if len(files) != len(tables):
-        return {"status": "error", "error": f"文件数量({len(files)})与 tables 数量({len(tables)})不一致"}
+        return {"status": "error", "error": f"File count ({len(files)}) does not match tables count ({len(tables)})"}
 
     if ddl_file and ddl_file.filename:
         ddl_content = (await ddl_file.read()).decode("utf-8", errors="replace")
@@ -151,7 +151,7 @@ async def execute_sql_files(
             with open(path, "wb") as f:
                 while chunk := await uf.read(1024 * 1024):
                     f.write(chunk)
-        # 归一化 delimiter：多字符时转成 \t 或 ,
+        # Normalize delimiter: multi-char -> \t or ,
         for t in tables:
             d = t.get("delimiter", ",")
             if isinstance(d, str) and len(d) != 1:
@@ -171,39 +171,39 @@ async def execute_sql_files(
                     pass
 
 
-# ==================== 客户端调用：DDL + 数据文件 + SQL/Python 分析（无需前端）====================
+# ==================== Client call: DDL + data files + SQL/Python analysis (no frontend) ====================
 
 @app.post("/api/run-analysis")
 async def run_analysis(
-    config: Optional[str] = Form(None, description='JSON 字符串；也可用 config_file 上传 JSON 文件'),
-    config_file: Optional[UploadFile] = File(None, description="或上传 JSON 文件作为 config（curl -F config=@xxx.json 时用）"),
-    files: List[UploadFile] = File(..., description="数据文件，顺序与 config.tables 一致"),
-    ddl: Optional[str] = Form(None, description="DDL 文本（建库/建表等），可选"),
-    ddl_file: Optional[UploadFile] = File(None, description="或上传 DDL 文件，与 ddl 二选一"),
+    config: Optional[str] = Form(None, description='JSON string; or upload JSON via config_file'),
+    config_file: Optional[UploadFile] = File(None, description="Or upload JSON file as config (e.g. curl -F config=@xxx.json)"),
+    files: List[UploadFile] = File(..., description="Data files, order matches config.tables"),
+    ddl: Optional[str] = Form(None, description="DDL text (create DB/tables etc.), optional"),
+    ddl_file: Optional[UploadFile] = File(None, description="Or upload DDL file; use either ddl or ddl_file"),
 ):
     """
-    客户端进程调用：先执行 DDL（建库/建表），再按 config 将数据文件导入对应表，最后执行 SQL 或 Python 分析。
-    - config 可为 Form 字符串，或通过 config_file 上传 JSON 文件（如 curl -F config=@config.json）。
-    - ddl 或 ddl_file：建库、建表等 SQL（可选）。
-    - config.tables：每表 table_name、has_header、delimiter、ddl、columns 等，与 files 顺序一致。
-    - config.analysis_type：sql | python。
-    - config.sql：分析用 SQL（analysis_type=sql 时必填；python 时可选作 data_sql）。
-    - config.python：分析用 Python 代码（analysis_type=python 时必填），需定义 result。
-    - config.data_sql：analysis_type=python 时，用该 SQL 取数传入 input_params['data']；不填则用 sql 或 SELECT * FROM 第一张表。
+    Client process call: run DDL (create DB/tables), import data files per config, then run SQL or Python analysis.
+    - config: Form string or JSON file via config_file (e.g. curl -F config=@config.json).
+    - ddl or ddl_file: create DB/tables SQL (optional).
+    - config.tables: per-table table_name, has_header, delimiter, ddl, columns; order matches files.
+    - config.analysis_type: sql | python.
+    - config.sql: analysis SQL (required for sql; optional as data_sql for python).
+    - config.python: Python code for analysis_type=python; must define result.
+    - config.data_sql: for python, SQL to fetch data into input_params['data']; else uses sql or SELECT * FROM first table.
     """
     if config_file and config_file.filename:
         config = (await config_file.read()).decode("utf-8", errors="replace")
     if not config or not config.strip():
-        return {"status": "error", "error": "请提供 config（Form 字符串）或 config_file（JSON 文件）"}
+        return {"status": "error", "error": "Provide config (Form string) or config_file (JSON file)"}
     try:
         conf = json.loads(config)
     except Exception as e:
-        return {"status": "error", "error": f"config 非合法 JSON: {e}"}
+        return {"status": "error", "error": f"config is not valid JSON: {e}"}
     tables = conf.get("tables")
     if not isinstance(tables, list) or not tables:
-        return {"status": "error", "error": "config 需包含 tables 数组且非空"}
+        return {"status": "error", "error": "config must contain non-empty tables array"}
     if len(files) != len(tables):
-        return {"status": "error", "error": f"文件数量({len(files)})与 tables 数量({len(tables)})不一致"}
+        return {"status": "error", "error": f"File count ({len(files)}) does not match tables count ({len(tables)})"}
 
     ddl_text = None
     if ddl_file and ddl_file.filename:
@@ -245,26 +245,26 @@ async def run_analysis(
                     pass
 
 
-# ==================== 项目管理 ====================
+# ==================== Project management ====================
 
 @app.post("/api/projects", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
 async def create_project(project: ProjectCreate, db: Session = Depends(get_db)):
-    """创建可信模型计算项目"""
+    """Create trusted compute project"""
     return project_service.create_project(db, project)
 
 
 @app.get("/api/projects", response_model=List[ProjectResponse])
 async def list_projects(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    """获取项目列表"""
+    """List projects"""
     return project_service.list_projects(db, skip=skip, limit=limit)
 
 
 @app.get("/api/projects/{project_id}", response_model=ProjectResponse)
 async def get_project(project_id: int, db: Session = Depends(get_db)):
-    """获取项目详情"""
+    """Get project detail"""
     project = project_service.get_project(db, project_id)
     if not project:
-        raise HTTPException(status_code=404, detail="项目不存在")
+        raise HTTPException(status_code=404, detail="Project not found")
     return project
 
 
@@ -274,17 +274,17 @@ async def join_project(
     request: ProjectJoinRequest, 
     db: Session = Depends(get_db)
 ):
-    """加入项目（审批加入请求）"""
+    """Join project (approve join request)"""
     return project_service.join_project(db, project_id, request)
 
 
 @app.get("/api/projects/{project_id}/participants")
 async def list_participants(project_id: int, db: Session = Depends(get_db)):
-    """获取项目参与者列表"""
+    """List project participants"""
     return project_service.list_participants(db, project_id)
 
 
-# ==================== 计算任务管理 ====================
+# ==================== Task management ====================
 
 @app.post("/api/projects/{project_id}/tasks", response_model=TaskResponse, status_code=status.HTTP_201_CREATED)
 async def create_task(
@@ -292,22 +292,22 @@ async def create_task(
     task: TaskCreate,
     db: Session = Depends(get_db)
 ):
-    """创建计算任务"""
+    """Create compute task"""
     return task_service.create_task(db, project_id, task)
 
 
 @app.get("/api/projects/{project_id}/tasks", response_model=List[TaskResponse])
 async def list_tasks(project_id: int, db: Session = Depends(get_db)):
-    """获取项目的计算任务列表"""
+    """List project tasks"""
     return task_service.list_tasks(db, project_id)
 
 
 @app.get("/api/tasks/{task_id}", response_model=TaskResponse)
 async def get_task(task_id: int, db: Session = Depends(get_db)):
-    """获取计算任务详情"""
+    """Get task detail"""
     task = task_service.get_task(db, task_id)
     if not task:
-        raise HTTPException(status_code=404, detail="任务不存在")
+        raise HTTPException(status_code=404, detail="Task not found")
     return task
 
 
@@ -317,24 +317,24 @@ async def execute_task(
     execute_request: TaskExecuteRequest,
     db: Session = Depends(get_db)
 ):
-    """执行计算任务"""
-    # 1. 获取任务信息
+    """Execute compute task"""
+    # 1. Get task
     task = task_service.get_task(db, task_id)
     if not task:
-        raise HTTPException(status_code=404, detail="任务不存在")
+        raise HTTPException(status_code=404, detail="Task not found")
     
-    # 2. 在数据沙箱中执行
+    # 2. Execute in sandbox
     raw_result = sandbox_service.execute_task(db, task, execute_request.input_params)
     
     execution_time = raw_result.pop("execution_time", None)
     
-    # 3. 数据脱敏
+    # 3. Data masking
     masked_result = data_masking_service.mask_data(raw_result, task.output_config)
     
-    # 4. 加密结果
+    # 4. Encrypt result
     encrypted_result = encryption_service.encrypt_result(masked_result)
     
-    # 5. 保存结果
+    # 5. Save result
     result = task_service.save_result(db, task_id, encrypted_result, execution_time)
     
     return result
@@ -342,27 +342,27 @@ async def execute_task(
 
 @app.get("/api/tasks/{task_id}/results", response_model=List[TaskResultResponse])
 async def get_task_results(task_id: int, db: Session = Depends(get_db)):
-    """获取任务执行结果列表"""
+    """List task execution results"""
     return task_service.get_task_results(db, task_id)
 
 
 @app.get("/api/tasks/{task_id}/results/{result_id}", response_model=TaskResultResponse)
 async def get_task_result(task_id: int, result_id: int, db: Session = Depends(get_db)):
-    """获取任务执行结果详情（密文）"""
+    """Get task result detail (ciphertext)"""
     result = task_service.get_result(db, result_id)
     if not result or result.task_id != task_id:
-        raise HTTPException(status_code=404, detail="结果不存在")
+        raise HTTPException(status_code=404, detail="Result not found")
     return result
 
 
 @app.get("/api/tasks/{task_id}/results/{result_id}/decrypt", response_model=TaskResultDecryptedResponse)
 async def decrypt_task_result(task_id: int, result_id: int, db: Session = Depends(get_db)):
-    """解密并获取任务执行结果（明文，已脱敏）- 授权用户可查看"""
+    """Decrypt and get task result (plaintext, masked) - for authorized users"""
     result = task_service.get_result(db, result_id)
     if not result or result.task_id != task_id:
-        raise HTTPException(status_code=404, detail="结果不存在")
+        raise HTTPException(status_code=404, detail="Result not found")
     
-    # 解密结果
+    # Decrypt result
     decrypted_data = encryption_service.decrypt_result(result.encrypted_result)
     
     return TaskResultDecryptedResponse(
@@ -375,7 +375,7 @@ async def decrypt_task_result(task_id: int, result_id: int, db: Session = Depend
     )
 
 
-# 集成到客户端：将前端 build 放到 backend/static（或设 STATIC_DIR），后端同时提供 API + 页面
+# Integrate with client: put frontend build in backend/static (or set STATIC_DIR); backend serves API + static
 _static_dir = os.getenv("STATIC_DIR") or os.path.join(os.path.dirname(__file__), "static")
 if os.path.isdir(_static_dir) and os.path.isfile(os.path.join(_static_dir, "index.html")):
     app.mount("/", StaticFiles(directory=_static_dir, html=True), name="static")
@@ -391,7 +391,7 @@ if os.path.isdir(_static_dir) and os.path.isfile(os.path.join(_static_dir, "inde
 else:
     @app.get("/")
     async def root():
-        return {"message": "可信模型计算平台 API", "version": "1.0.0"}
+        return {"message": "Trusted Compute Platform API", "version": "1.0.0"}
 
 
 if __name__ == "__main__":

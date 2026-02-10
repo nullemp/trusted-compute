@@ -35,7 +35,7 @@ def main():
     args = parser.parse_args()
     base = args.base.rstrip("/")
 
-    # 示例数据：可改为从文件或数据库读取
+    # Sample data; can load from file or DB
     if args.data_json:
         with open(args.data_json, "r", encoding="utf-8") as f:
             data = json.load(f)

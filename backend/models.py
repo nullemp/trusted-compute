@@ -30,8 +30,8 @@ class Project(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(200), nullable=False, index=True)
     description = Column(Text)
-    owner_id = Column(String(100), nullable=False)  # 项目创建者ID
-    data_config = Column(JSON)  # 数据配置信息
+    owner_id = Column(String(100), nullable=False)  # Project owner ID
+    data_config = Column(JSON)  # Data config
     status = Column(Enum(ProjectStatus), default=ProjectStatus.ACTIVE)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -45,9 +45,9 @@ class Participant(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
-    participant_id = Column(String(100), nullable=False)  # 参与者ID
+    participant_id = Column(String(100), nullable=False)  # Participant ID
     participant_name = Column(String(200))
-    data_resource = Column(JSON)  # 提供的数据资源信息
+    data_resource = Column(JSON)  # Data resource info
     status = Column(Enum(ParticipantStatus), default=ParticipantStatus.PENDING)
     joined_at = Column(DateTime)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -63,9 +63,9 @@ class Task(Base):
     name = Column(String(200), nullable=False)
     description = Column(Text)
     model_type = Column(String(50), nullable=False)  # "sql" or "python"
-    model_code = Column(Text, nullable=False)  # SQL语句或Python脚本
-    input_params = Column(JSON)  # 输入参数定义
-    output_config = Column(JSON)  # 输出配置（脱敏规则等）
+    model_code = Column(Text, nullable=False)  # SQL or Python script
+    input_params = Column(JSON)  # Input params
+    output_config = Column(JSON)  # Output config (masking rules etc.)
     status = Column(Enum(TaskStatus), default=TaskStatus.CREATED)
     created_by = Column(String(100))
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -80,9 +80,9 @@ class TaskResult(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
-    encrypted_result = Column(Text, nullable=False)  # 加密后的结果密文
-    result_hash = Column(String(64))  # 结果哈希值
-    execution_time = Column(Integer)  # 执行时间（秒）
+    encrypted_result = Column(Text, nullable=False)  # Encrypted result ciphertext
+    result_hash = Column(String(64))  # Result hash
+    execution_time = Column(Integer)  # Execution time (seconds)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     task = relationship("Task", back_populates="results")

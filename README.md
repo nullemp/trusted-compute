@@ -1,172 +1,129 @@
-# 可信模型计算平台 (Trusted Compute Platform)
+# Trusted Compute Platform
 
-## 概念说明
+A multi-party secure computation platform: multiple data providers participate in computation tasks and get results without exposing raw data. Supports SQL and Python analysis, data masking, and result encryption.
 
-### 什么是可信模型计算？
+---
 
-可信模型计算是一个**多方安全计算平台**，允许多个数据提供方在**不泄露原始数据**的前提下，共同参与数据计算任务并获得结果。
+## 1. What services does this project run?
 
-### 核心特点
+This repo uses **Docker Compose** (or Podman + compose) to run three components:
 
-1. **数据隐私保护**：各方的原始数据不出本地，只在安全沙箱中参与计算
-2. **多方协作**：多个数据提供方可以共同参与一个计算项目
-3. **灵活的计算模型**：支持SQL查询、Python脚本等多种计算方式
-4. **结果安全输出**：计算结果经过脱敏和加密处理后才输出
+| Service   | Description | Port |
+|-----------|-------------|------|
+| **mariadb** | Database for projects, tasks, participants, etc.; supports bulk load (LOAD DATA). | 3306 |
+| **backend** | FastAPI backend: REST API, runs SQL/Python tasks, invokes sandbox, masking and encryption. | 8000 |
+| **sandbox** | Used only to **build the image**; not long-running. Backend starts it with `docker run --rm` per task, then removes it for isolation. | - |
 
-### 应用场景举例
+- There is no separate frontend. You use the system by **calling the backend API** or running the **client-simulator** scripts.
+- Stack: Python FastAPI, MariaDB, Docker/Podman sandbox, AES-256 encryption and masking.
 
-**场景1：医疗数据分析**
-- 医院A有患者年龄和性别数据
-- 医院B有患者诊断结果数据
-- 医院C有患者治疗方案数据
-- **目标**：分析不同治疗方案的效果，但各医院不能看到其他医院的原始数据
-- **解决方案**：
-  1. 创建可信模型计算项目"治疗方案效果分析"
-  2. 三家医院加入项目，各自提供加密的数据资源
-  3. 创建计算任务，使用SQL联合查询（但数据在各自沙箱中）
-  4. 执行计算，结果脱敏后输出（如：只显示年龄段、效果评分，不显示具体患者信息）
+---
 
-**场景2：金融风控模型**
-- 银行A有客户交易数据
-- 银行B有客户信用数据
-- 征信机构C有客户历史记录
-- **目标**：建立联合风控模型，但各方数据不能直接共享
-- **解决方案**：
-  1. 创建项目"联合风控模型"
-  2. 各方加入并提供数据
-  3. 使用Python脚本训练机器学习模型（联邦学习）
-  4. 输出加密的模型参数和风险评估结果
+## 2. How to start
 
-**场景3：供应链优化**
-- 供应商A有库存数据
-- 供应商B有物流数据
-- 制造商C有生产计划数据
-- **目标**：优化供应链，但各方商业机密不能泄露
-- **解决方案**：
-  1. 创建项目"供应链优化分析"
-  2. 各方加入项目
-  3. 使用SQL和Python脚本进行联合计算
-  4. 输出脱敏的优化建议（如：建议库存量范围，不显示具体库存数）
+Run everything from the **project root** (the directory that contains `docker-compose.yml` and `scripts`).
 
-## 项目架构
+### Option A: Start with scripts (recommended; auto-detects Podman/Docker)
 
-```
-可信模型计算平台
-├── 项目管理层
-│   ├── 创建项目
-│   ├── 邀请数据提供方
-│   └── 审批加入请求
-├── 计算任务层
-│   ├── 创建计算任务
-│   ├── 定义计算模型（SQL/Python）
-│   └── 任务调度
-├── 数据沙箱层
-│   ├── 隔离执行环境
-│   ├── SQL执行引擎
-│   └── Python执行引擎
-└── 安全输出层
-    ├── 数据脱敏
-    ├── 结果加密
-    └── 密文输出
-```
+Scripts prefer `runtime/podman` or `runtime/docker` under the project, then fall back to the system PATH. On Windows with Podman they check WSL.
 
-## 技术栈
+- **Windows (cmd)**:`scripts\start-for-client.cmd`
+- **PowerShell**:`scripts\start-for-client.ps1`
+- **Linux / macOS**:`scripts/start-for-client.sh`
 
-- **后端**：Python FastAPI
-- **数据库**：MariaDB
-- **沙箱执行**：Docker 容器隔离（每次任务新建容器，执行完即销毁）
-- **加密**：AES-256加密
-- **脱敏**：数据掩码、泛化处理
+On first run, if images are missing you’ll see a message that they will be pulled from the network; if they already exist locally, they are used as-is.
 
-## 快速开始
+### Option B: Docker Compose directly
 
-**想一次性跑通 Demo（起服务 + 调 API）**：见 **[DEMO_完整流程.md](DEMO_完整流程.md)**，按步骤执行即可。
-
-### 从 GitHub 克隆后能否直接用？
-
-- **代码**：克隆/拉取后就有，无需再“下载项目”。
-- **运行环境**：在新机器或隔天第一次用，通常还需要准备一次（以后同一台机器一般不用重复）：
-  - **有 Docker**：在项目根目录执行 `docker-compose up -d --build`，首次会拉取/构建镜像（需网络）。
-  - **无 Docker（Windows）**：用 `.\scripts\start-for-client.cmd` 时，若本机无 Podman，脚本会引导下载到 `runtime/` 或使用系统 Docker；详见 [docs/START_FOR_CLIENT_SUMMARY.md](docs/START_FOR_CLIENT_SUMMARY.md)。
-  - **客户端测试**：`client-simulator` 需本机有 Python，并执行 `pip install -r client-simulator/requirements.txt`（首次一次即可）。
-
-总结：**项目本身不用重新下载；依赖（镜像、Python 包、可选 runtime）在新环境第一次跑时会拉取/安装，之后可直接用。**
-
-### 使用Docker Compose启动
+If you have Docker and want to use compose from the project root:
 
 ```bash
-# 启动所有服务
-docker-compose up -d
+docker-compose up -d --build
+```
 
-# 查看日志
-docker-compose logs -f
+### Pre-pulling images (optional)
 
-# 停止服务
+To pull base images in advance (or export them for offline use):
+
+- Windows:`scripts\pull-images.cmd` or `scripts\pull-images.ps1`
+- Linux / macOS:`scripts/pull-images.sh`
+
+This pulls the MariaDB and Python base images and exports them under `runtime/images/*.tar` for fully offline use; the start script will load them automatically when present.
+
+### After start
+
+- Backend API:<http://localhost:8000>
+- API docs (Swagger):<http://localhost:8000/docs>
+
+---
+
+## 3. How to stop
+
+When you’re done, run the matching stop from the **project root**.
+
+### If you started with scripts → stop with scripts
+
+- **Windows (cmd)**:`scripts\stop-for-client.cmd`
+- **PowerShell**:`scripts\stop-for-client.ps1`
+- **Linux / macOS**:`scripts/stop-for-client.sh`
+
+These run `compose down` with the same Podman/Docker setup and stop the backend and mariadb containers.
+
+### If you started with Docker Compose → run down manually
+
+```bash
+docker compose down
+# or older CLI
 docker-compose down
 ```
 
-### 访问服务
+To also remove volumes (wipe DB data):`docker compose down -v`.
 
-- **后端API**：http://localhost:8000
-- **API文档**：http://localhost:8000/docs
+---
 
-> 说明：当前仓库已移除 Web 前端界面，推荐直接通过后端 API 或 `client-simulator` 客户端脚本进行集成与测试。
+## 4. How to use
 
-### 客户环境无 Docker
+### 4.1 Call the API directly
 
-若客户机不装 Docker、仅由客户端进程调用 API（无需前端），请见 **[DEPLOY_CLIENT_NO_DOCKER.md](DEPLOY_CLIENT_NO_DOCKER.md)**（部署）与 **[CLIENT_API.md](CLIENT_API.md)**（接口说明）。需安装 MariaDB + Python，设置 `SANDBOX_MODE=local` 后只启动后端即可。
+Use curl, Postman, or any HTTP client against `http://localhost:8000`. Reference:
 
-## 功能模块
+- **Interactive docs**:open <http://localhost:8000/docs> in a browser.
 
-### 1. 创建项目
-- 输入项目名称、描述
-- 配置数据资源要求
-- 设置项目权限
+Main capabilities:
 
-### 2. 加入项目
-- 接收项目邀请
-- 审批加入请求
-- 提供数据资源
+- **Project management**:create projects, join projects, list participants (`/api/projects`, etc.).
+- **Task management**:create tasks, execute tasks, get results (`/api/projects/{id}/tasks`, `/api/tasks/{id}/execute`, etc.).
+- **Direct SQL execution (no project/task)**:  
+  - Submit data + SQL:`POST /api/execute-sql`  
+  - Single CSV file + SQL:`POST /api/execute-sql/file`  
+  - Multiple CSVs + one SQL:`POST /api/execute-sql/files`
+- **Client-style analysis (DDL + data files + SQL/Python)**:`POST /api/run-analysis` (optional DDL; import tables per config, then run SQL or Python analysis).
 
-### 3. 创建计算任务
-- 定义计算模型（SQL/Python）
-- 配置输入参数
-- 设置输出格式
+### 4.2 Run examples with client-simulator
 
-### 4. 执行计算任务
-- 在数据沙箱中执行
-- 隔离环境运行
-- 结果暂存
+The `client-simulator` directory contains example scripts that call the API.
 
-### 5. 计算结果输出
-- 数据脱敏处理
-- 加密生成密文
-- 安全输出结果
+1. Install dependencies (once):  
+   `pip install -r client-simulator/requirements.txt`
+2. Ensure the services are running (see section 2).
+3. Run examples:
+   - Single run:`python client-simulator/run_analysis_demo.py` or `python client-simulator/execute_sql_files_demo.py`
+   - Or run both in one go:  
+     - Windows:`client-simulator\run_tests.cmd` or `client-simulator\run_tests.ps1`  
+     - Linux/macOS:`cd client-simulator && ./run_tests.sh`
 
-## 性能与「为什么慢」
+The scripts wait for the API to be ready, then call `/api/run-analysis`, `/api/execute-sql/files`, etc., and print results in the console.
 
-- **原因**：为保证隔离，每次执行任务都会 `docker run` 启动一个**新容器**，任务结束后用 `--rm` 销毁，所以会有**冷启动**开销（创建容器 + 启动 Python + 若为 Python 任务还会加载 pandas/numpy），通常单次 2～10 秒。
-- **已做优化**：
-  - 沙箱镜像多阶段构建，去掉 gcc、减小体积，加快容器启动。
-  - SQL 任务不加载 pandas/numpy，只跑 Python 标准库，明显快于 Python 任务。
-  - 入口使用 `python -u` 无缓冲输出，结果一算完就返回。
-- **若仍觉得慢**：可考虑在满足安全要求的前提下，对「仅 SQL、无敏感依赖」的任务走进程内执行并加超时与资源限制，或改用常驻 worker 池复用容器（需在架构上权衡隔离性与延迟）。
+### 4.3 Environment variables (optional)
 
-## 开源方案推荐
+- `BUNDLED_RUNTIME_ROOT`:Override the runtime root (instead of project `runtime/`). See [ENV_VARS_WINDOWS.md](ENV_VARS_WINDOWS.md).
+- `USE_OFFICIAL_HUB=1`:Use Docker Hub for image pull (default uses a domestic mirror).
+- On Windows with Podman, if you see a WSL-related message, see [WSL_SETUP_WINDOWS.md](WSL_SETUP_WINDOWS.md).
 
-### 1. FATE (Federated AI Technology Enabler)
-- **GitHub**: https://github.com/FederatedAI/FATE
-- **特点**：工业级联邦学习框架
-- **适用**：机器学习模型训练
+---
 
-### 2. SecretFlow
-- **GitHub**: https://github.com/secretflow/secretflow
-- **特点**：隐私计算框架，支持多方安全计算
-- **适用**：通用隐私计算场景
+## 5. Other notes
 
-### 3. PySyft
-- **GitHub**: https://github.com/OpenMined/PySyft
-- **特点**：Python联邦学习库
-- **适用**：研究和原型开发
-
-本项目提供了一个简化的实现，适合学习和理解概念。生产环境建议使用上述开源方案。
+- **Performance**:Tasks run in separate containers (`docker run --rm` per run), so there is cold-start overhead (roughly 2–10 seconds per run). The sandbox image uses a multi-stage build to keep size down.
+- **Client machines without Docker**:If you only need to call the API and don’t run compose, you can deploy MariaDB and the Python backend separately and set `SANDBOX_MODE=local`; see any in-repo deployment docs if present.
+- This repo is a simplified implementation for understanding multi-party secure computation; for production you may want mature options such as FATE or SecretFlow.

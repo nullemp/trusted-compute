@@ -1,6 +1,6 @@
 """
-客户端调用：接收 DDL 文件 + 数据文件，建库/建表、导入数据，再执行 SQL 或 Python 分析。
-不依赖前端，供客户端进程调用。
+Client call: accept DDL + data files, create DB/tables, import data, then run SQL or Python analysis.
+No frontend; for client process.
 """
 import json
 import os
@@ -25,8 +25,8 @@ def _job_db_name() -> str:
 
 
 def _split_ddl_statements(ddl: str) -> List[str]:
-    """按分号拆分 DDL，去掉空语句和注释行。"""
-    # 简单按 ; 拆分，保留引号内分号不拆（此处不处理复杂情况，客户 DDL 应规范）
+    """Split DDL by semicolon; drop empty and comment lines."""
+    # Simple split by ; (quoted semicolons not handled; client DDL should be well-formed)
     parts = re.split(r";\s*", ddl.strip())
     out = []
     for p in parts:
@@ -38,7 +38,7 @@ def _split_ddl_statements(ddl: str) -> List[str]:
 
 
 def _rewrite_ddl_for_job_db(statement: str, job_db: str) -> Optional[str]:
-    """跳过 CREATE DATABASE；将 USE xxx 改为 USE job_db；其余原样。"""
+    """Skip CREATE DATABASE; rewrite USE xxx to USE job_db; rest unchanged."""
     s = statement.strip().upper()
     if s.startswith("CREATE DATABASE"):
         return None
@@ -48,7 +48,7 @@ def _rewrite_ddl_for_job_db(statement: str, job_db: str) -> Optional[str]:
 
 
 def _run_ddl_in_job_db(cursor, ddl_text: str, job_db: str) -> None:
-    """在已 USE job_db 的连接上执行客户 DDL（已过滤 CREATE DATABASE / USE）。"""
+    """Execute client DDL on connection already USE job_db (CREATE DATABASE/USE filtered)."""
     for stmt in _split_ddl_statements(ddl_text):
         rewritten = _rewrite_ddl_for_job_db(stmt, job_db)
         if rewritten is None:
@@ -67,13 +67,13 @@ def _load_data_into_table(
     ddl: Optional[str] = None,
 ) -> None:
     """
-    在当前 DB（job DB）中：若表不存在则用 config 建表，再 LOAD DATA。
-    table_name 必须已存在（由 DDL 创建）或由本函数根据 ddl/文件首行创建。
+    In current DB (job DB): create table from config if not exists, then LOAD DATA.
+    table_name must exist (from DDL) or be created by this function from ddl/first line.
     """
     file_path = os.path.abspath(file_path)
     upload_dir_abs = os.path.abspath(upload_dir)
     if not os.path.isfile(file_path) or not file_path.startswith(upload_dir_abs):
-        raise ValueError(f"文件不存在或路径不允许: {file_path}")
+        raise ValueError(f"File not found or path not allowed: {file_path}")
 
     table_name = _sanitize_identifier(table_name) or "input_data"
     path_escaped = file_path.replace("\\", "\\\\").replace("'", "\\'")
@@ -85,17 +85,17 @@ def _load_data_into_table(
         delim_sql = repr(delimiter)
     ignore_lines = "IGNORE 1 LINES" if has_header else ""
 
-    # 检查表是否存在（cursor 已 USE job_db）
+    # Check if table exists (cursor already USE job_db)
     cursor.execute(
         "SELECT 1 FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = %s",
         (table_name,),
     )
     if not cursor.fetchone():
-        # 表不存在，创建
+        # Table does not exist, create
         if ddl:
             col_list = _parse_ddl(ddl)
             if not col_list:
-                raise ValueError("DDL 格式无效")
+                raise ValueError("Invalid DDL format")
             create_sql = f"CREATE TABLE `{table_name}` ({col_list})"
         else:
             with open(file_path, "r", encoding="utf-8", errors="replace", newline="") as f:
@@ -128,22 +128,22 @@ def run_analysis(
     data_sql: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
-    流程：创建 job 库 → 执行 DDL（建表等）→ 按 config 将数据文件导入对应表 → 执行 SQL 或 Python 分析 → 删库。
-    - ddl_text: 可选，DDL SQL（可含 CREATE DATABASE / USE / CREATE TABLE）
-    - table_configs: 与 file_paths 一一对应，每项 table_name, has_header?, delimiter?, ddl?, columns?
+    Flow: create job DB -> run DDL (tables etc.) -> import data files per config -> run SQL or Python analysis -> drop DB.
+    - ddl_text: optional DDL SQL (may include CREATE DATABASE/USE/CREATE TABLE)
+    - table_configs: 1:1 with file_paths; each table_name, has_header?, delimiter?, ddl?, columns?
     - analysis_type: "sql" | "python"
-    - analysis_sql: analysis_type=sql 时执行的 SQL
-    - analysis_python: analysis_type=python 时的 Python 代码（需定义 result）
-    - data_sql: analysis_type=python 时，用该 SQL 取数据传入 input_params["data"]；不传则用 analysis_sql 或 "SELECT * FROM 第一张表"
+    - analysis_sql: SQL to run when analysis_type=sql
+    - analysis_python: Python code when analysis_type=python (must define result)
+    - data_sql: when analysis_type=python, SQL to fetch data into input_params["data"]; else analysis_sql or SELECT * FROM first table
     """
     if len(file_paths) != len(table_configs):
-        return {"status": "error", "error": f"数据文件数量({len(file_paths)})与表配置数量({len(table_configs)})不一致"}
+        return {"status": "error", "error": f"Data file count ({len(file_paths)}) does not match table config count ({len(table_configs)})"}
     if analysis_type not in ("sql", "python"):
-        return {"status": "error", "error": "analysis_type 须为 sql 或 python"}
+        return {"status": "error", "error": "analysis_type must be sql or python"}
     if analysis_type == "sql" and not (analysis_sql and analysis_sql.strip()):
-        return {"status": "error", "error": "analysis_type=sql 时须提供 analysis_sql"}
+        return {"status": "error", "error": "analysis_sql required when analysis_type=sql"}
     if analysis_type == "python" and not (analysis_python and analysis_python.strip()):
-        return {"status": "error", "error": "analysis_type=python 时须提供 analysis_python"}
+        return {"status": "error", "error": "analysis_python required when analysis_type=python"}
 
     job_db = _job_db_name()
     upload_dir = os.path.abspath(UPLOAD_DIR)
@@ -198,10 +198,10 @@ def run_analysis(
                 "result": {"row_count": cursor.rowcount},
             }
 
-        # Python：用 data_sql 或 analysis_sql 或 "SELECT * FROM first_table" 取数据，传入沙箱
+        # Python: fetch data with data_sql or analysis_sql or "SELECT * FROM first_table", pass to sandbox
         run_sql = (data_sql or analysis_sql or "").strip() or (f"SELECT * FROM `{first_table}`" if first_table else "")
         if not run_sql:
-            return {"status": "error", "error": "analysis_type=python 时需提供 data_sql 或 analysis_sql，或至少有表可 SELECT"}
+            return {"status": "error", "error": "Provide data_sql or analysis_sql for analysis_type=python, or have at least one table to SELECT"}
         cursor.execute(run_sql)
         if cursor.description:
             result_columns = [d[0] for d in cursor.description]

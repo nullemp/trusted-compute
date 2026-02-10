@@ -1,20 +1,20 @@
 """
-直接执行 SQL 服务：将数据插入 MariaDB 临时表后执行用户 SQL，返回结果。
-- execute_sql_mariadb: JSON 数据入库后执行（适合中小数据量）
-- execute_sql_from_file: 文件上传 + LOAD DATA LOCAL INFILE（适合亿行级）
+Direct SQL execution: insert data into MariaDB temp table, run user SQL, return result.
+- execute_sql_mariadb: JSON data then execute (small/medium data)
+- execute_sql_from_file: file upload + LOAD DATA LOCAL INFILE (large scale)
 """
 import os
 from typing import List, Any, Dict, Optional, Union, Tuple
 
 from database import engine
 
-# 临时表列类型：TEXT 支持较大单格，大数据量用 MariaDB 落盘
+# Temp table column type: TEXT for large cells; large data on MariaDB disk
 _COL_TYPE = "TEXT"
 _BATCH_SIZE = 5000
 
 
 def _sanitize_identifier(name: str) -> str:
-    """只保留字母、数字、下划线，用于表名和列名."""
+    """Keep only letters, digits, underscore; for table/column names."""
     return "".join(c for c in name if c.isalnum() or c == "_") or "col"
 
 
@@ -22,7 +22,7 @@ def _normalize_data(
     data: List[Union[List[Any], Dict[str, Any]]],
     columns: Optional[List[str]] = None,
 ) -> Tuple[List[str], List[List[Any]]]:
-    """得到列名列表和行数据（每行为 list）。"""
+    """Return column names and row data (each row as list)."""
     if not data:
         return [], []
     rows = data
@@ -33,7 +33,7 @@ def _normalize_data(
         columns = [f"col_{i}" for i in range(len(rows[0]))]
     else:
         columns = columns or [f"col_{i}" for i in range(len(rows[0]))]
-    # 统一为 list of list，值为 str 或 number
+    # Normalize to list of list, values str or number
     out = []
     for r in rows:
         if isinstance(r, dict):
@@ -50,15 +50,15 @@ def execute_sql_mariadb(
     columns: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """
-    在 MariaDB 中创建临时表、插入 data、执行 sql，返回结果。
-    临时表随连接关闭自动销毁，支持大数据量。
+    Create temp table in MariaDB, insert data, run sql, return result.
+    Temp table dropped when connection closes; supports large data.
     """
     table_name = _sanitize_identifier(table_name) or "input_data"
     cols, rows = _normalize_data(data, columns)
     if not cols:
-        return {"status": "error", "error": "数据或列名为空"}
+        return {"status": "error", "error": "Data or columns empty"}
 
-    # 列名用反引号包裹，避免保留字
+    # Quote column names to avoid reserved words
     col_list = ", ".join(f"`{c}` {_COL_TYPE}" for c in cols)
     create_sql = f"CREATE TEMPORARY TABLE `{table_name}` ({col_list})"
     placeholders = ", ".join(["%s"] * len(cols))
@@ -70,12 +70,12 @@ def execute_sql_mariadb(
         cursor = conn.cursor()
         cursor.execute(create_sql)
 
-        # 批量插入
+        # Batch insert
         for i in range(0, len(rows), _BATCH_SIZE):
             batch = [tuple(str(v) if v is not None else "" for v in row) for row in rows[i : i + _BATCH_SIZE]]
             cursor.executemany(insert_sql, batch)
 
-        # 执行用户 SQL（单条语句）
+        # Execute user SQL (single statement)
         cursor.execute(sql)
         if cursor.description:
             result_columns = [d[0] for d in cursor.description]
@@ -108,18 +108,17 @@ def execute_sql_mariadb(
         conn.close()
 
 
-# 文件上传后保存到此目录，LOAD DATA 时仅允许读此目录下文件
+# Uploaded files saved here; LOAD DATA only allows reading under this dir
 UPLOAD_DIR = os.environ.get("TRUSTED_COMPUTE_UPLOAD_DIR", "/tmp/trusted_compute_upload")
 
-# DDL 中允许的类型：仅包含安全字符 [A-Za-z0-9(),.]
+# DDL allowed types: safe chars only [A-Za-z0-9(),.]
 _TYPE_SAFE_CHARS = set("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789(),. ")
 
 
 def parse_ddl_file(content: str) -> Dict[str, str]:
     """
-    从数据库导出的 SQL 文件（如 schema.sql）中解析每个 CREATE TABLE，
-    返回 { 表名: "列定义串" }，列定义即括号内部分，如 "id INT, name VARCHAR(100)"。
-    用于用同一份 DDL 文件作为建表依据。
+    Parse each CREATE TABLE from DB-exported SQL (e.g. schema.sql);
+    return { table_name: "column_def_str" }, column def = part inside parens, e.g. "id INT, name VARCHAR(100)".
     """
     out: Dict[str, str] = {}
     lower_content = content.lower()
@@ -128,7 +127,7 @@ def parse_ddl_file(content: str) -> Dict[str, str]:
         idx = lower_content.find("create table", pos)
         if idx < 0:
             break
-        # 跳过 CREATE TABLE [IF NOT EXISTS]，取表名（`name` 或 name）
+        # Skip CREATE TABLE [IF NOT EXISTS], get table name (`name` or name)
         start = idx + len("create table")
         rest = content[start:].lstrip()
         if rest.lower().startswith("if not exists"):
@@ -145,7 +144,7 @@ def parse_ddl_file(content: str) -> Dict[str, str]:
         if not rest.startswith("("):
             pos = start
             continue
-        # 找匹配的右括号（列类型里可能有 VARCHAR(20) 等）
+        # Find matching right paren (type may contain VARCHAR(20) etc.)
         depth = 0
         i = 0
         for i, c in enumerate(rest):
@@ -165,7 +164,7 @@ def parse_ddl_file(content: str) -> Dict[str, str]:
 
 
 def _split_ddl_by_comma(ddl: str) -> List[str]:
-    """按逗号分割 DDL，但忽略括号内的逗号（如 DECIMAL(10,2)、VARCHAR(20)）。"""
+    """Split DDL by comma, ignoring commas inside parens (e.g. DECIMAL(10,2), VARCHAR(20))."""
     out: List[str] = []
     depth = 0
     start = 0
@@ -184,9 +183,8 @@ def _split_ddl_by_comma(ddl: str) -> List[str]:
 
 def _parse_ddl(ddl: str) -> Optional[str]:
     """
-    解析 DDL 表体（括号内部分），返回安全的 CREATE 列定义串。
-    例如 "id INT, value DECIMAL(10,2), name VARCHAR(100)" -> "`id` INT, `value` DECIMAL(10,2), `name` VARCHAR(100)"
-    按逗号分割时忽略括号内逗号，避免 DECIMAL(10,2) 被拆开。
+    Parse DDL table body (inside parens), return safe CREATE column def string.
+    E.g. "id INT, value DECIMAL(10,2), name VARCHAR(100)" -> "`id` INT, `value` DECIMAL(10,2), `name` VARCHAR(100)".
     """
     if not ddl or not ddl.strip():
         return None
@@ -194,7 +192,7 @@ def _parse_ddl(ddl: str) -> Optional[str]:
     for part in _split_ddl_by_comma(ddl):
         if not part:
             continue
-        # 第一个空格前为列名，其余为类型
+        # Before first space = column name, rest = type
         idx = part.find(" ")
         if idx <= 0:
             continue
@@ -218,32 +216,31 @@ def execute_sql_from_file(
     ddl: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
-    使用 MariaDB LOAD DATA LOCAL INFILE 将 CSV 文件导入临时表后执行 SQL。
-    不将文件全部读入应用内存，支持亿行级数据。
-    file_path: 后端可读的绝对路径（应位于 UPLOAD_DIR 下）。
-    ddl: 可选。表结构，即 CREATE TABLE 括号内部分，如 "id INT, value DECIMAL(10,2), name VARCHAR(100)"。
-         CSV 列顺序须与 DDL 列顺序一致。不传则从首行推断列名，类型均为 TEXT。
+    Import CSV into temp table via MariaDB LOAD DATA LOCAL INFILE, then run SQL.
+    File not loaded into app memory; supports very large data.
+    file_path: absolute path readable by backend (under UPLOAD_DIR).
+    ddl: optional. Table DDL body, e.g. "id INT, value DECIMAL(10,2), name VARCHAR(100)"; CSV column order must match. Else infer from first line as TEXT.
     """
     file_path = os.path.abspath(file_path)
     if not os.path.isfile(file_path):
-        return {"status": "error", "error": f"文件不存在: {file_path}"}
+        return {"status": "error", "error": f"File not found: {file_path}"}
     upload_dir = os.path.abspath(UPLOAD_DIR)
     if not file_path.startswith(upload_dir):
-        return {"status": "error", "error": "文件路径不允许"}
+        return {"status": "error", "error": "File path not allowed"}
 
     table_name = _sanitize_identifier(table_name) or "input_data"
 
     if ddl:
         col_list = _parse_ddl(ddl)
         if not col_list:
-            return {"status": "error", "error": "DDL 格式无效，示例: id INT, value DECIMAL(10,2), name VARCHAR(100)"}
+            return {"status": "error", "error": "Invalid DDL format, e.g.: id INT, value DECIMAL(10,2), name VARCHAR(100)"}
         create_sql = f"CREATE TEMPORARY TABLE `{table_name}` ({col_list})"
     else:
         try:
             with open(file_path, "r", encoding="utf-8", errors="replace", newline="") as f:
                 first = f.readline()
         except Exception as e:
-            return {"status": "error", "error": f"读取文件失败: {e}"}
+            return {"status": "error", "error": f"Failed to read file: {e}"}
         first = first.rstrip("\r\n")
         if columns_override:
             cols = [_sanitize_identifier(c) for c in columns_override]
@@ -253,7 +250,7 @@ def execute_sql_from_file(
             n = len(first.split(delimiter))
             cols = [f"col_{i}" for i in range(n)]
         if not cols:
-            return {"status": "error", "error": "无法推断列"}
+            return {"status": "error", "error": "Cannot infer columns"}
         col_list = ", ".join(f"`{c}` {_COL_TYPE}" for c in cols)
         create_sql = f"CREATE TEMPORARY TABLE `{table_name}` ({col_list})"
 
@@ -322,15 +319,14 @@ def _build_create_and_load_for_file(
     ddl: Optional[str] = None,
 ) -> Tuple[str, str, str]:
     """
-    为单文件构建 CREATE 与 LOAD SQL。返回 (table_name_safe, create_sql, load_sql)。
-    不做连接，仅做路径校验与 SQL 拼接。
+    Build CREATE and LOAD SQL for single file. Return (table_name_safe, create_sql, load_sql). No DB connection; path check and SQL only.
     """
     file_path = os.path.abspath(file_path)
     if not os.path.isfile(file_path):
-        raise ValueError(f"文件不存在: {file_path}")
+        raise ValueError(f"File not found: {file_path}")
     upload_dir_abs = os.path.abspath(upload_dir)
     if not file_path.startswith(upload_dir_abs):
-        raise ValueError("文件路径不允许")
+        raise ValueError("File path not allowed")
 
     table_name = _sanitize_identifier(table_name) or "input_data"
     path_escaped = file_path.replace("\\", "\\\\").replace("'", "\\'")
@@ -345,7 +341,7 @@ def _build_create_and_load_for_file(
     if ddl:
         col_list = _parse_ddl(ddl)
         if not col_list:
-            raise ValueError("DDL 格式无效")
+            raise ValueError("Invalid DDL format")
         create_sql = f"CREATE TEMPORARY TABLE `{table_name}` ({col_list})"
     else:
         with open(file_path, "r", encoding="utf-8", errors="replace", newline="") as f:
@@ -359,7 +355,7 @@ def _build_create_and_load_for_file(
             n = len(first.split(delimiter))
             cols = [f"col_{i}" for i in range(n)]
         if not cols:
-            raise ValueError("无法推断列")
+            raise ValueError("Cannot infer columns")
         col_list = ", ".join(f"`{c}` {_COL_TYPE}" for c in cols)
         create_sql = f"CREATE TEMPORARY TABLE `{table_name}` ({col_list})"
 
@@ -379,11 +375,11 @@ def execute_sql_from_files(
     sql: str,
 ) -> Dict[str, Any]:
     """
-    多表：多个 CSV 分别导入多个临时表（同一连接），再执行一条 SQL（可连表）。
-    file_paths 与 table_configs 一一对应。每个 config: table_name, ddl?, has_header?, delimiter?, columns?
+    Multi-table: import each CSV into a temp table (same connection), then run one SQL (can join).
+    file_paths and table_configs 1:1. Each config: table_name, ddl?, has_header?, delimiter?, columns?
     """
     if len(file_paths) != len(table_configs):
-        return {"status": "error", "error": f"文件数量({len(file_paths)})与表配置数量({len(table_configs)})不一致"}
+        return {"status": "error", "error": f"File count ({len(file_paths)}) does not match table config count ({len(table_configs)})"}
 
     upload_dir = os.path.abspath(UPLOAD_DIR)
     steps = []
@@ -400,7 +396,7 @@ def execute_sql_from_files(
             )
             steps.append((tname, create_sql, load_sql))
         except Exception as e:
-            return {"status": "error", "error": f"表{i}({cfg.get('table_name', '')}): {e}"}
+            return {"status": "error", "error": f"Table {i} ({cfg.get('table_name', '')}): {e}"}
 
     conn = engine.raw_connection()
     cursor = None

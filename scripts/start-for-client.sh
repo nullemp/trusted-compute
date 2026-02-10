@@ -34,6 +34,12 @@ if [[ -n "$ADD_TO_PATH" ]]; then
   export PATH="$ADD_TO_PATH:$PATH"
 fi
 
+# Prefer domestic mirror when pulling
+export MARIADB_IMAGE="${MARIADB_IMAGE:-docker.m.daocloud.io/library/mariadb:11}"
+export PYTHON_IMAGE="${PYTHON_IMAGE:-docker.m.daocloud.io/library/python:3.11-slim}"
+
+echo "If required images are not present locally, they will be fetched from the network. Please wait."
+
 if [[ "$RUNTIME" == "podman" ]]; then
   if podman compose version &>/dev/null; then
     podman compose up -d --build

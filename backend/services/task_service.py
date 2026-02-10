@@ -34,8 +34,7 @@ class TaskService:
         return db.query(Task).filter(Task.project_id == project_id).all()
 
     def save_result(self, db: Session, task_id: int, encrypted_result: str, execution_time: Optional[int] = None) -> TaskResult:
-        """保存任务执行结果"""
-        # 计算结果哈希
+        """Save task execution result"""
         result_hash = hashlib.sha256(encrypted_result.encode()).hexdigest()
 
         db_result = TaskResult(
@@ -46,7 +45,6 @@ class TaskService:
         )
         db.add(db_result)
 
-        # 更新任务状态
         task = self.get_task(db, task_id)
         if task:
             task.status = TaskStatus.COMPLETED

@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-模拟客户端调用 POST /api/execute-sql/files：多表 CSV + 一条 SQL。
-需先启动服务，再运行本脚本。
+Simulate client POST /api/execute-sql/files: multi-table CSV + one SQL.
+Start the service first, then run this script.
 """
 import json
 import os
 import sys
 
-# Windows: 强制 stdout/stderr 使用 UTF-8，避免控制台无输出
+# Windows: force UTF-8 for stdout/stderr so console shows output
 if sys.platform == "win32":
     try:
         sys.stdout.reconfigure(encoding="utf-8")
@@ -18,7 +18,7 @@ if sys.platform == "win32":
 try:
     import requests
 except ImportError:
-    print("请安装: pip install requests", file=sys.stderr, flush=True)
+    print("Install: pip install requests", file=sys.stderr, flush=True)
     sys.exit(1)
 
 BASE = os.environ.get("TRUSTED_COMPUTE_API", "http://localhost:8000")
@@ -49,11 +49,11 @@ def main():
     users_csv = os.path.join(DATA_DIR, "users.csv")
     schema_sql = os.path.join(DATA_DIR, "schema.sql")
     if not os.path.isfile(orders_csv) or not os.path.isfile(users_csv):
-        print(f"请确保 {DATA_DIR} 下存在 orders.csv、users.csv", file=sys.stderr, flush=True)
+        print(f"Ensure {DATA_DIR} contains orders.csv and users.csv", file=sys.stderr, flush=True)
         sys.exit(1)
 
     url = f"{BASE.rstrip('/')}/api/execute-sql/files"
-    print("模拟客户端: POST /api/execute-sql/files", flush=True)
+    print("Client sim: POST /api/execute-sql/files", flush=True)
     print(f"  API: {url}\n", flush=True)
 
     with open(orders_csv, "rb") as f1, open(users_csv, "rb") as f2:
@@ -65,7 +65,7 @@ def main():
             ddl_f = open(schema_sql, "rb")
             try:
                 files.append(("ddl_file", ("schema.sql", ddl_f, "text/plain")))
-                print("  使用 data/schema.sql 作为建表 DDL（从数据库导出的文件）", flush=True)
+                print("  Using data/schema.sql as table DDL (exported from DB)", flush=True)
                 r = requests.post(
                     url,
                     data={"config": json.dumps(CONFIG, ensure_ascii=False)},
@@ -86,21 +86,20 @@ def main():
 
     print(json.dumps(out, ensure_ascii=False, indent=2), flush=True)
     if out.get("status") == "error":
-        print("\n失败:", out.get("error"), file=sys.stderr, flush=True)
+        print("\nFailed:", out.get("error"), file=sys.stderr, flush=True)
         sys.exit(1)
-    # 表格形式展示 result，便于直接看到数据处理结果
     result = out.get("result")
     if isinstance(result, dict) and "columns" in result and "data" in result:
         cols = result["columns"]
         rows = result["data"]
-        print("\n--- 数据处理结果（表格） ---", flush=True)
+        print("\n--- Result (table) ---", flush=True)
         if cols:
             print("  " + " | ".join(str(c) for c in cols), flush=True)
             print("  " + "-" * (sum(len(str(c)) for c in cols) + 3 * (len(cols) - 1)), flush=True)
         for row in rows:
             print("  " + " | ".join(str(v) for v in row), flush=True)
-        print(f"  共 {len(rows)} 行。", flush=True)
-    print("\n完成。", flush=True)
+        print(f"  Total {len(rows)} rows.", flush=True)
+    print("\nDone.", flush=True)
 
 
 if __name__ == "__main__":

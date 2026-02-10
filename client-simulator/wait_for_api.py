@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""轮询等待 API 就绪，供模拟客户端在发请求前调用。"""
+"""Poll until API is ready; for client sim to call before sending requests."""
 import os
 import sys
 import time
 
-# Windows: 强制 stdout/stderr 使用 UTF-8，避免控制台无输出
+# Windows: force UTF-8 for stdout/stderr
 if sys.platform == "win32":
     try:
         sys.stdout.reconfigure(encoding="utf-8")
@@ -15,7 +15,7 @@ if sys.platform == "win32":
 try:
     import requests
 except ImportError:
-    print("请安装: pip install requests", file=sys.stderr, flush=True)
+    print("Install: pip install requests", file=sys.stderr, flush=True)
     sys.exit(1)
 
 BASE = os.environ.get("TRUSTED_COMPUTE_API", "http://localhost:8000")

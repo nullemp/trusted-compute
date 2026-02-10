@@ -9,7 +9,7 @@ function Test-WslReady {
     # 1) If "wsl -e echo 0" works, WSL can run commands (distro is usable) -> ready
     $null = cmd /c "wsl -e echo 0 2>nul"
     if ($LASTEXITCODE -eq 0) { return $true }
-    # 2) Else check "wsl -l -v": if exit code is 0 and there is at least one distro line (and not "no installed distribution"), WSL is considered ready
+    # 2) Else check "wsl -l -v": if exit 0 and output has a distro line (not "no installed distribution"), WSL is ready
     $out = cmd /c "wsl -l -v 2>nul"
     if ($LASTEXITCODE -ne 0) { return $false }
     if ($out -match "no installed distribution|没有已安装的分发|No installed") { return $false }
@@ -21,8 +21,9 @@ function Install-WslIfNeeded {
         Remove-Item (Join-Path $env:TEMP "trusted-compute-wsl-install-started.txt") -Force -ErrorAction SilentlyContinue
         return $true
     }
-    Write-Host "WSL is required for Podman on Windows, but this offline package will NOT automatically install WSL." -ForegroundColor Yellow
-    Write-Host "Please enable WSL (with at least one Linux distribution such as Ubuntu) when building your offline environment, then run scripts/start-for-client.cmd again." -ForegroundColor Yellow
+    Write-Host "WSL is required for Podman on Windows, but this offline package does not install WSL automatically." -ForegroundColor Yellow
+    Write-Host "Please enable WSL (with at least one distro, e.g. Ubuntu) when preparing your offline image, then run scripts/start-for-client.cmd again." -ForegroundColor Yellow
+    Write-Host "For detailed WSL installation steps, see WSL_SETUP_WINDOWS.md in the project root." -ForegroundColor Yellow
     return $false
 }
 
@@ -35,10 +36,29 @@ function Ensure-DockerComposeForPodman {
         if ($len -gt 1MB) { return $ComposeExe }
     }
     Write-Host ""
-    Write-Host "docker-compose.exe was not found in $ComposeDir, and this offline package will NOT download it automatically." -ForegroundColor Yellow
-    Write-Host "Please download docker-compose-windows-x86_64.exe in an online environment, rename it to docker-compose.exe, and place it into $ComposeDir before running this script." -ForegroundColor Yellow
+    Write-Host "docker-compose.exe was not found in $ComposeDir; this offline package does not download it automatically." -ForegroundColor Yellow
+    Write-Host "Download docker-compose-windows-x86_64.exe when online, rename it to docker-compose.exe, and place it in $ComposeDir." -ForegroundColor Yellow
     Write-Host ""
     return $null
+}
+
+function Load-LocalImages {
+    param(
+        [string]$RuntimeTool
+    )
+    # Completely offline mode: if there are image archives under runtime\images, load them before starting.
+    $ImagesDir = Join-Path $ProjectRoot "runtime\images"
+    if (-not (Test-Path $ImagesDir)) { return }
+    $archives = Get-ChildItem -Path $ImagesDir -Filter *.tar -File -ErrorAction SilentlyContinue
+    if (-not $archives -or $archives.Count -eq 0) { return }
+    Write-Host "Found local image archives under runtime\images. Loading them into $RuntimeTool..." -ForegroundColor Cyan
+    foreach ($img in $archives) {
+        Write-Host "Loading $($img.Name) ..." -ForegroundColor Cyan
+        & $RuntimeTool load -i $img.FullName
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "Failed to load $($img.Name) with $RuntimeTool. You may need to run '$RuntimeTool load -i ""$($img.FullName)""' manually." -ForegroundColor Yellow
+        }
+    }
 }
 
 $RuntimeRoot = if ($env:BUNDLED_RUNTIME_ROOT) { $env:BUNDLED_RUNTIME_ROOT } else { Join-Path $ProjectRoot "runtime" }
@@ -102,6 +122,9 @@ if ($runtime -eq "podman") {
     $env:PYTHON_IMAGE = "docker.m.daocloud.io/library/python:3.11-slim".Trim()
     $env:DOCKER_BUILDKIT = "0"
     $env:COMPOSE_DOCKER_CLI_BUILD = "0"
+    # If fully offline, first try to load any bundled image archives from runtime\images using podman load.
+    Load-LocalImages -RuntimeTool "podman"
+    Write-Host "If required images are not present locally, they will be fetched from the network. Please wait." -ForegroundColor Cyan
     # Prefer built-in "podman compose", then podman-compose, then docker-compose (works with Podman's Docker API)
     $composeOk = $false
     cmd /c "podman compose version 2>nul"
@@ -132,6 +155,12 @@ if ($runtime -eq "podman") {
         exit 1
     }
 } else {
+    # Prefer domestic mirror when pulling (same as Podman path)
+    if (-not $env:MARIADB_IMAGE) { $env:MARIADB_IMAGE = "docker.m.daocloud.io/library/mariadb:11" }
+    if (-not $env:PYTHON_IMAGE) { $env:PYTHON_IMAGE = "docker.m.daocloud.io/library/python:3.11-slim" }
+    # If fully offline, first try to load any bundled image archives from runtime\images using docker load.
+    Load-LocalImages -RuntimeTool "docker"
+    Write-Host "If required images are not present locally, they will be fetched from the network. Please wait." -ForegroundColor Cyan
     cmd /c "docker compose version 2>nul"
     if ($LASTEXITCODE -eq 0) {
         cmd /c "docker compose up -d --build"

@@ -1,7 +1,6 @@
 """
-沙箱入口：从 stdin 读取 JSON（model_type, model_code, input_params），
-执行后向 stdout 输出 JSON 结果。每次任务对应一次容器运行，结束后容器销毁。
-当 input_params 含 data 时：在内存 SQLite 建表、插入数据后执行 SQL 并返回结果。
+Sandbox entry: read JSON from stdin (model_type, model_code, input_params), run, output JSON to stdout.
+One container run per task, then container removed. When input_params has data: in-memory SQLite table, insert, run SQL, return result.
 """
 import sys
 import json
@@ -9,7 +8,7 @@ import sqlite3
 
 
 def run_sql(sql_code: str, input_params: dict) -> dict:
-    # 模板替换（用于无 data 的简单参数化）
+    # Template substitution (for simple param when no data)
     for key, value in input_params.items():
         if key in ("data", "columns", "table_name"):
             continue
@@ -19,7 +18,7 @@ def run_sql(sql_code: str, input_params: dict) -> dict:
     table_name = input_params.get("table_name", "input_data")
 
     if not data:
-        # 无数据时返回演示用模拟结果（兼容旧用法）
+        # No data: return demo mock result (backward compat)
         return {
             "type": "sql",
             "sql": sql_code,
@@ -31,7 +30,7 @@ def run_sql(sql_code: str, input_params: dict) -> dict:
             "status": "success",
         }
 
-    # 有数据：内存 SQLite 建表 -> 插入 -> 执行 SQL
+    # With data: in-memory SQLite create table -> insert -> run SQL
     rows = data
     columns = input_params.get("columns")
     if columns is None and rows and isinstance(rows[0], dict):
@@ -42,7 +41,7 @@ def run_sql(sql_code: str, input_params: dict) -> dict:
 
     conn = sqlite3.connect(":memory:")
     conn.row_factory = sqlite3.Row
-    # 安全表名：仅字母数字下划线
+    # Safe table name: alphanumeric and underscore only
     safe_table = "".join(c for c in table_name if c.isalnum() or c == "_") or "input_data"
     placeholders = ", ".join("?" * len(columns))
     col_def = ", ".join(f'"{c}" TEXT' for c in columns)

@@ -1,12 +1,12 @@
 #!/bin/bash
-# 多表 demo：先启动服务 docker-compose up -d，再执行本脚本
-# 使用 demo 数据：demo_orders.csv + demo_users.csv，连表聚合每人订单总额
+# Multi-table demo: start service with docker-compose up -d, then run this script
+# Uses demo_orders.csv + demo_users.csv, join and aggregate order total per user
 
 set -e
 BASE="${TRUSTED_COMPUTE_API:-http://localhost:8000}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-echo "多表 demo：orders + users 连表，按用户汇总订单金额"
+echo "Multi-table demo: orders + users join, order total per user"
 echo "API: $BASE"
 echo ""
 

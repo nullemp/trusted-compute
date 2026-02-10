@@ -1,6 +1,6 @@
 """
-数据沙箱服务：每次执行任务时启动新的 Docker 容器，任务结束后自动销毁容器（--rm）。
-客户环境无 Docker 时可通过 SANDBOX_MODE=local 使用本地子进程执行（无隔离，仅适用于可信环境）。
+Sandbox service: start new Docker container per task, auto-remove (--rm) when done.
+When no Docker: SANDBOX_MODE=local runs in local subprocess (no isolation; trusted env only).
 """
 import json
 import os
@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from models import Task
 
-# 本地模式时 runner.py 的路径（相对于本文件：services/sandbox_service.py -> sandbox/runner.py）
+# Path to runner.py in local mode (relative to this file: services/sandbox_service.py -> sandbox/runner.py)
 _RUNNER_PATH = os.path.join(os.path.dirname(__file__), "..", "sandbox", "runner.py")
 
 
@@ -21,11 +21,11 @@ class SandboxService:
     def __init__(self):
         self.sandbox_image = os.getenv("SANDBOX_IMAGE", "trusted-compute-sandbox")
         self.sandbox_mode = os.getenv("SANDBOX_MODE", "docker").strip().lower()  # docker | local
-        # 客户端可捆绑 Podman 时设 CONTAINER_RUNTIME=podman，与 docker 命令兼容
-        self.container_runtime = os.getenv("CONTAINER_RUNTIME", "docker").strip().lower()  # docker | podman
+        # Set CONTAINER_RUNTIME=podman when bundling Podman; compatible with docker CLI
+        self.container_runtime = os.getenv("CONTAINER_RUNTIME", "docker").strip().lower()
 
     def _run_docker(self, stdin_bytes: bytes) -> subprocess.CompletedProcess:
-        """使用 Docker/Podman 容器执行（需宿主机有对应运行时且挂载 socket）。"""
+        """Run in Docker/Podman container (host must have runtime and socket mounted)."""
         return subprocess.run(
             [
                 self.container_runtime,
