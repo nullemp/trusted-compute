@@ -38,6 +38,18 @@ fi
 export MARIADB_IMAGE="${MARIADB_IMAGE:-docker.m.daocloud.io/library/mariadb:11}"
 export PYTHON_IMAGE="${PYTHON_IMAGE:-docker.m.daocloud.io/library/python:3.11-slim}"
 
+# Fully offline: if image archives exist under runtime/images, load them first.
+IMAGES_DIR="$RUNTIME_ROOT/images"
+if [[ -d "$IMAGES_DIR" ]]; then
+  for tar in "$IMAGES_DIR"/*.tar; do
+    [[ -f "$tar" ]] || continue
+    echo "Loading local image: $tar"
+    if ! "$RUNTIME" load -i "$tar"; then
+      echo "Warning: Failed to load $tar"
+    fi
+  done
+fi
+
 echo "If required images are not present locally, they will be fetched from the network. Please wait."
 
 if [[ "$RUNTIME" == "podman" ]]; then

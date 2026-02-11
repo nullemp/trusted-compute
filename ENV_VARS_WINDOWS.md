@@ -1,25 +1,25 @@
-## Windows 环境变量生效方式速查（以 `BUNDLED_RUNTIME_ROOT` 为例）
+## Windows environment variables quick reference (using `BUNDLED_RUNTIME_ROOT` as an example)
 
-本项目中的脚本（例如 `scripts/start-for-client.ps1` / `scripts/start-for-client.cmd`）会读取环境变量 `BUNDLED_RUNTIME_ROOT`，用于指定“打包好的运行时目录”（如 Podman / Docker 及相关工具所在的位置）。下面总结在 Windows 下几种常见的设置方式，以及它们生效范围的区别。
+Scripts in this project (e.g. `scripts/start-for-client.ps1` / `scripts/start-for-client.cmd`) read the environment variable `BUNDLED_RUNTIME_ROOT` to specify the bundled runtime directory (where Podman / Docker and related tools are located). Below is a summary of common ways to set it on Windows and how their scope differs.
 
 ---
 
-### 1. 临时设置：只在当前 `cmd` 窗口中生效
+### 1. Temporary: only in the current `cmd` window
 
-- **作用范围**：仅当前命令行会话（这个窗口），关闭窗口后失效。
-- **适用于**：一次性测试、临时修改。
+- **Scope**: Current command-line session only; the variable is lost when you close the window.
+- **Use when**: One-off tests or temporary overrides.
 
 ```cmd
 set BUNDLED_RUNTIME_ROOT=D:\my-offline-runtime
 scripts\start-for-client.cmd
 ```
 
-说明：
-- 先用 `set` 在当前窗口中设置环境变量；
-- 随后运行脚本时，脚本就能读到这个变量；
-- 退出或关闭该 `cmd` 窗口后，变量不再存在。
+Notes:
+- Use `set` to define the variable in the current window.
+- The script will then see this value when you run it.
+- After you exit or close that `cmd` window, the variable no longer exists.
 
-也可以把设置和执行合在一行：
+You can also set and run in one line:
 
 ```cmd
 set BUNDLED_RUNTIME_ROOT=D:\my-offline-runtime && scripts\start-for-client.cmd
@@ -27,44 +27,44 @@ set BUNDLED_RUNTIME_ROOT=D:\my-offline-runtime && scripts\start-for-client.cmd
 
 ---
 
-### 2. 在 PowerShell 中临时设置
+### 2. Temporary in PowerShell
 
-- **作用范围**：仅当前 PowerShell 会话（这个标签/窗口）。
+- **Scope**: Current PowerShell session (this tab/window) only.
 
 ```powershell
 $env:BUNDLED_RUNTIME_ROOT = "D:\my-offline-runtime"
 scripts\start-for-client.ps1
 ```
 
-关闭该 PowerShell 会话后，变量失效。
+After you close that PowerShell session, the variable is gone.
 
 ---
 
-### 3. 永久设置：通过“环境变量”界面配置
+### 3. Permanent: via the Environment Variables UI
 
-- **作用范围**：
-  - “用户变量”：当前用户下所有新开的 `cmd` / PowerShell / 其他进程。
-  - “系统变量”：整台机器的所有用户和新进程。
-- **适用于**：希望长期固定使用某个 runtime 目录的场景。
+- **Scope**:
+  - **User variables**: All new `cmd` / PowerShell / other processes for the current user.
+  - **System variables**: All users and new processes on the machine.
+- **Use when**: You want to permanently use a specific runtime directory.
 
-操作步骤（Windows 图形界面）：
+Steps (Windows GUI):
 
-1. 打开“系统属性”：
-   - 方法之一：在“此电脑”/“这台电脑”上右键 → `属性` → `高级系统设置`。
-2. 点击下方的 `环境变量(N)...`。
-3. 在“用户变量”或“系统变量”部分点击“新建(N)...”：
-   - 变量名：`BUNDLED_RUNTIME_ROOT`
-   - 变量值：例如 `D:\my-offline-runtime`
-4. 保存后，**重新打开** `cmd` / PowerShell 窗口，再运行脚本。
+1. Open **System properties**:
+   - One way: Right-click **This PC** → **Properties** → **Advanced system settings**.
+2. Click **Environment Variables...** at the bottom.
+3. Under **User variables** or **System variables**, click **New...**:
+   - Variable name: `BUNDLED_RUNTIME_ROOT`
+   - Variable value: e.g. `D:\my-offline-runtime`
+4. After saving, **open a new** `cmd` or PowerShell window, then run the script.
 
 ---
 
-### 4. 不设置时的默认行为
+### 4. Default when not set
 
-在 `start-for-client.ps1` 中，runtime 根目录的选择逻辑大致如下：
+In `start-for-client.ps1`, the runtime root is chosen roughly as follows:
 
 ```powershell
-# 伪代码说明逻辑
+# Pseudocode for the logic
 if ($env:BUNDLED_RUNTIME_ROOT) {
     $RuntimeRoot = $env:BUNDLED_RUNTIME_ROOT
 } else {
@@ -72,26 +72,25 @@ if ($env:BUNDLED_RUNTIME_ROOT) {
 }
 ```
 
-也就是说：
+So:
 
-- **如果设置了 `BUNDLED_RUNTIME_ROOT`**：脚本优先使用你指定的目录。
-- **如果没有设置**：脚本回退到项目自身目录下的 `runtime\` 作为默认运行时目录。
+- **If `BUNDLED_RUNTIME_ROOT` is set**: The script uses your specified directory.
+- **If not set**: The script falls back to the project’s own `runtime\` directory as the default runtime root.
 
 ---
 
-### 5. 快捷自检：确认变量是否生效
+### 5. Quick check: confirm the variable is in effect
 
-在 `cmd` 中：
+In `cmd`:
 
 ```cmd
 echo %BUNDLED_RUNTIME_ROOT%
 ```
 
-在 PowerShell 中：
+In PowerShell:
 
 ```powershell
 echo $env:BUNDLED_RUNTIME_ROOT
 ```
 
-如果能正确显示你设置的路径，说明环境变量已在当前会话中生效，脚本也就能读到这个值。
-
+If the path you set is printed, the variable is in effect in the current session and the script will read it.
