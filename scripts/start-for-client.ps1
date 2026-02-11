@@ -1,4 +1,4 @@
-# Client integration: run from project root. Start backend + MariaDB with Podman or Docker (no frontend).
+# Start backend + sandbox from project root. This project uses Podman; offline machines typically have only Podman (no Docker).
 # Prefer bundled runtime under project runtime/ then PATH (Podman before Docker).
 # On Windows with Podman, ensure WSL and Podman Machine are ready so users do not need to configure them manually.
 $ErrorActionPreference = "Stop"
@@ -46,11 +46,11 @@ function Load-LocalImages {
     param(
         [string]$RuntimeTool
     )
-    # Completely offline mode: if there are image archives under runtime\images, load them before starting.
+    # Offline mode: if there are image archives under runtime\images, load them and skip build later.
     $ImagesDir = Join-Path $ProjectRoot "runtime\images"
-    if (-not (Test-Path $ImagesDir)) { return }
+    if (-not (Test-Path $ImagesDir)) { return $false }
     $archives = Get-ChildItem -Path $ImagesDir -Filter *.tar -File -ErrorAction SilentlyContinue
-    if (-not $archives -or $archives.Count -eq 0) { return }
+    if (-not $archives -or $archives.Count -eq 0) { return $false }
     Write-Host "Found local image archives under runtime\images. Loading them into $RuntimeTool..." -ForegroundColor Cyan
     foreach ($img in $archives) {
         Write-Host "Loading $($img.Name) ..." -ForegroundColor Cyan
@@ -59,6 +59,7 @@ function Load-LocalImages {
             Write-Host "Failed to load $($img.Name) with $RuntimeTool. You may need to run '$RuntimeTool load -i ""$($img.FullName)""' manually." -ForegroundColor Yellow
         }
     }
+    return $true
 }
 
 $RuntimeRoot = if ($env:BUNDLED_RUNTIME_ROOT) { $env:BUNDLED_RUNTIME_ROOT } else { Join-Path $ProjectRoot "runtime" }
@@ -83,7 +84,7 @@ if (Test-Path $BundledPodman) {
 }
 
 if (-not $runtime) {
-    Write-Error "No podman or docker found. Either place runtime in project: runtime\podman\podman.exe or runtime\docker\docker.exe, or install one on PATH. See DOCKER_IN_CLIENT.md."
+    Write-Error "No Podman or Docker found. This project uses Podman; place runtime\podman\podman.exe or add podman to PATH. See README and docs/OFFLINE_DEPLOY.md."
     exit 1
 }
 
@@ -118,22 +119,24 @@ if ($runtime -eq "podman") {
         }
     }
     $env:DOCKER_HOST = "npipe:////./pipe/docker_engine"
-    $env:MARIADB_IMAGE = "docker.m.daocloud.io/library/mariadb:11".Trim()
     $env:PYTHON_IMAGE = "docker.m.daocloud.io/library/python:3.11-slim".Trim()
     $env:DOCKER_BUILDKIT = "0"
     $env:COMPOSE_DOCKER_CLI_BUILD = "0"
-    # If fully offline, first try to load any bundled image archives from runtime\images using podman load.
-    Load-LocalImages -RuntimeTool "podman"
-    Write-Host "If required images are not present locally, they will be fetched from the network. Please wait." -ForegroundColor Cyan
+    # If offline image archives exist, load them and use --no-build so no network is used.
+    $usedOfflineImages = Load-LocalImages -RuntimeTool "podman"
+    $composeBuildArg = if ($usedOfflineImages) { "--no-build" } else {
+        Write-Host "If required images are not present locally, they will be fetched from the network. Please wait." -ForegroundColor Cyan
+        "--build"
+    }
     # Prefer built-in "podman compose", then podman-compose, then docker-compose (works with Podman's Docker API)
     $composeOk = $false
     cmd /c "podman compose version 2>nul"
     if ($LASTEXITCODE -eq 0) {
-        cmd /c "podman compose up -d --build"
+        cmd /c "podman compose up -d $composeBuildArg"
         $composeOk = ($LASTEXITCODE -eq 0)
     }
     if (-not $composeOk -and (Get-Command podman-compose -ErrorAction SilentlyContinue)) {
-        cmd /c "podman-compose up -d --build"
+        cmd /c "podman-compose up -d $composeBuildArg"
         $composeOk = ($LASTEXITCODE -eq 0)
     }
     if (-not $composeOk) {
@@ -145,7 +148,7 @@ if ($runtime -eq "podman") {
                     Write-Host "Retrying compose in 10s (daemon may still be starting)..."
                     Start-Sleep -Seconds 10
                 }
-                cmd /c "set `"DOCKER_HOST=npipe:////./pipe/docker_engine`" && set `"DOCKER_BUILDKIT=0`" && set `"COMPOSE_DOCKER_CLI_BUILD=0`" && set `"MARIADB_IMAGE=docker.m.daocloud.io/library/mariadb:11`" && set `"PYTHON_IMAGE=docker.m.daocloud.io/library/python:3.11-slim`" && cd /d `"$ProjectRoot`" && `"$composeExePath`" up -d --build"
+                cmd /c "set `"DOCKER_HOST=npipe:////./pipe/docker_engine`" && set `"DOCKER_BUILDKIT=0`" && set `"COMPOSE_DOCKER_CLI_BUILD=0`" && set `"PYTHON_IMAGE=docker.m.daocloud.io/library/python:3.11-slim`" && cd /d `"$ProjectRoot`" && `"$composeExePath`" up -d $composeBuildArg"
                 if ($LASTEXITCODE -eq 0) { $composeOk = $true; break }
             }
         }
@@ -155,17 +158,17 @@ if ($runtime -eq "podman") {
         exit 1
     }
 } else {
-    # Prefer domestic mirror when pulling (same as Podman path)
-    if (-not $env:MARIADB_IMAGE) { $env:MARIADB_IMAGE = "docker.m.daocloud.io/library/mariadb:11" }
     if (-not $env:PYTHON_IMAGE) { $env:PYTHON_IMAGE = "docker.m.daocloud.io/library/python:3.11-slim" }
-    # If fully offline, first try to load any bundled image archives from runtime\images using docker load.
-    Load-LocalImages -RuntimeTool "docker"
-    Write-Host "If required images are not present locally, they will be fetched from the network. Please wait." -ForegroundColor Cyan
+    $usedOfflineImages = Load-LocalImages -RuntimeTool "docker"
+    $composeBuildArg = if ($usedOfflineImages) { "--no-build" } else {
+        Write-Host "If required images are not present locally, they will be fetched from the network. Please wait." -ForegroundColor Cyan
+        "--build"
+    }
     cmd /c "docker compose version 2>nul"
     if ($LASTEXITCODE -eq 0) {
-        cmd /c "docker compose up -d --build"
+        cmd /c "docker compose up -d $composeBuildArg"
     } else {
-        cmd /c "docker-compose up -d --build"
+        cmd /c "docker-compose up -d $composeBuildArg"
     }
 }
 

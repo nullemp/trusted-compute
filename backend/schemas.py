@@ -1,113 +1,43 @@
+from typing import Any, Dict, List, Optional, Union
+
 from pydantic import BaseModel, Field
-from typing import Optional, Dict, Any, List, Union
-from datetime import datetime
-from models import ProjectStatus, ParticipantStatus, TaskStatus
 
 
-# ==================== Direct SQL execution (no project/task) ====================
+JsonRow = Union[List[Any], Dict[str, Any]]
+
+
+class TableSpec(BaseModel):
+    table_name: str = Field(..., description="表名")
+    data: List[JsonRow] = Field(..., description="表数据：每行 list 或 dict")
+    columns: Optional[List[str]] = Field(
+        None, description="列名；不填则从 dict key 或第一行长度推断"
+    )
+
 
 class ExecuteSqlRequest(BaseModel):
-    """Accept data + SQL: insert into MariaDB temp table, run SQL, return result (supports large data)."""
-    data: List[Union[List[Any], Dict[str, Any]]] = Field(..., description="Table data: each row list or dict")
-    sql: str = Field(..., description="SQL to run; can query inserted table (default name input_data)")
-    table_name: Optional[str] = Field("input_data", description="Temp table name, alphanumeric and underscore only")
-    columns: Optional[List[str]] = Field(None, description="Column names; required when data is list; inferred from first row for list of dict")
+    """沙箱 SQL 请求：支持单表或多表（tables）。"""
+
+    sql: str = Field(..., description="要执行的 SQL 语句")
+    # 单表模式
+    data: Optional[List[JsonRow]] = Field(
+        None, description="单表数据；与 table_name/columns 搭配使用"
+    )
+    table_name: Optional[str] = Field(
+        "input_data", description="单表模式下的表名，默认 input_data"
+    )
+    columns: Optional[List[str]] = Field(
+        None, description="单表模式下的列名；可选"
+    )
+    # 多表模式
+    tables: Optional[List[TableSpec]] = Field(
+        None, description="多表模式：每个元素包含 table_name + data(+columns)"
+    )
 
 
-# ==================== Project related ====================
+class ExecutePythonRequest(BaseModel):
+    """沙箱 Python 请求：传入代码和输入参数。"""
 
-class ProjectCreate(BaseModel):
-    name: str = Field(..., description="Project name")
-    description: Optional[str] = Field(None, description="Project description")
-    owner_id: str = Field(..., description="Project owner ID")
-    data_config: Optional[Dict[str, Any]] = Field(None, description="Data config")
-
-
-class ProjectJoinRequest(BaseModel):
-    participant_id: str = Field(..., description="Participant ID")
-    participant_name: str = Field(..., description="Participant name")
-    data_resource: Optional[Dict[str, Any]] = Field(None, description="Data resource info")
-
-
-class ProjectResponse(BaseModel):
-    id: int
-    name: str
-    description: Optional[str]
-    owner_id: str
-    data_config: Optional[Dict[str, Any]]
-    status: ProjectStatus
-    created_at: datetime
-    updated_at: datetime
-
-    class Config:
-        from_attributes = True
-
-
-class ParticipantResponse(BaseModel):
-    id: int
-    project_id: int
-    participant_id: str
-    participant_name: Optional[str]
-    data_resource: Optional[Dict[str, Any]]
-    status: ParticipantStatus
-    joined_at: Optional[datetime]
-    created_at: datetime
-
-    class Config:
-        from_attributes = True
-
-
-# ==================== Task related ====================
-
-class TaskCreate(BaseModel):
-    name: str = Field(..., description="Task name")
-    description: Optional[str] = Field(None, description="Task description")
-    model_type: str = Field(..., description="Model type: sql or python")
-    model_code: str = Field(..., description="SQL or Python script code")
-    input_params: Optional[Dict[str, Any]] = Field(None, description="Input params")
-    output_config: Optional[Dict[str, Any]] = Field(None, description="Output config (masking rules etc.)")
-    created_by: Optional[str] = Field(None, description="Creator ID")
-
-
-class TaskExecuteRequest(BaseModel):
-    input_params: Dict[str, Any] = Field(..., description="Input params for task execution")
-
-
-class TaskResponse(BaseModel):
-    id: int
-    project_id: int
-    name: str
-    description: Optional[str]
-    model_type: str
-    model_code: str
-    input_params: Optional[Dict[str, Any]]
-    output_config: Optional[Dict[str, Any]]
-    status: TaskStatus
-    created_by: Optional[str]
-    created_at: datetime
-    updated_at: datetime
-
-    class Config:
-        from_attributes = True
-
-
-class TaskResultResponse(BaseModel):
-    id: int
-    task_id: int
-    encrypted_result: str = Field(..., description="Encrypted result ciphertext")
-    result_hash: Optional[str]
-    execution_time: Optional[int]
-    created_at: datetime
-
-    class Config:
-        from_attributes = True
-
-
-class TaskResultDecryptedResponse(BaseModel):
-    """Decrypted result (masked plaintext)"""
-    id: int
-    task_id: int
-    result: Dict[str, Any] = Field(..., description="Decrypted result data (masked)")
-    result_hash: Optional[str]
-    execution_time: Optional[int]
-    created_at: datetime
+    code: str = Field(..., description="Python 代码，需在末尾设置 result 变量")
+    input_params: Dict[str, Any] = Field(
+        default_factory=dict, description="传入沙箱的参数，在代码中通过 input_params 使用"
+    )

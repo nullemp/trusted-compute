@@ -1,4 +1,4 @@
-# Stop backend + MariaDB (compose down). Run from project root. Uses same runtime as start-for-client.ps1.
+# Stop backend + sandbox (compose down). Run from project root. Uses same runtime as start-for-client.ps1.
 $ErrorActionPreference = "Stop"
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $ProjectRoot

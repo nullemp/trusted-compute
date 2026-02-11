@@ -1,28 +1,28 @@
 """
-Sandbox service: start new Docker container per task, auto-remove (--rm) when done.
-When no Docker: SANDBOX_MODE=local runs in local subprocess (no isolation; trusted env only).
+Sandbox service: run each request in a new container (docker run --rm -i <image>), stdin JSON -> stdout JSON.
 """
 import json
 import os
 import subprocess
-import sys
 import time
 from typing import Dict, Any, List, Optional
-
-from sqlalchemy.orm import Session
-
-from models import Task
-
-# Path to runner.py in local mode (relative to this file: services/sandbox_service.py -> sandbox/runner.py)
-_RUNNER_PATH = os.path.join(os.path.dirname(__file__), "..", "sandbox", "runner.py")
 
 
 class SandboxService:
     def __init__(self):
         self.sandbox_image = os.getenv("SANDBOX_IMAGE", "trusted-compute-sandbox")
-        self.sandbox_mode = os.getenv("SANDBOX_MODE", "docker").strip().lower()  # docker | local
-        # Set CONTAINER_RUNTIME=podman when bundling Podman; compatible with docker CLI
-        self.container_runtime = os.getenv("CONTAINER_RUNTIME", "docker").strip().lower()
+        # CONTAINER_RUNTIME=podman: use podman if in PATH, else fall back to docker (Podman socket is docker-compatible)
+        requested = os.getenv("CONTAINER_RUNTIME", "docker").strip().lower()
+        self.container_runtime = self._resolve_runtime(requested)
+
+    def _resolve_runtime(self, requested: str) -> str:
+        """Use requested runtime if available in PATH; otherwise fall back to docker (Podman socket is docker-compatible)."""
+        import shutil
+        if shutil.which(requested):
+            return requested
+        if requested == "podman" and shutil.which("docker"):
+            return "docker"  # backend image has docker CLI; host Podman often exposes docker.sock
+        return requested
 
     def _run_docker(self, stdin_bytes: bytes) -> subprocess.CompletedProcess:
         """Run in Docker/Podman container (host must have runtime and socket mounted)."""
@@ -32,7 +32,8 @@ class SandboxService:
                 self.container_runtime,
                 "run",
                 "--rm",
-                "--network", "none",
+                "--network",
+                "none",
                 "-i",
                 self.sandbox_image,
             ],
@@ -43,110 +44,18 @@ class SandboxService:
         print(f"Sandbox: container finished exit_code={result.returncode}", flush=True)
         return result
 
-    def _run_local(self, stdin_bytes: bytes) -> subprocess.CompletedProcess:
-        """使用当前环境 Python 子进程执行 runner.py（无隔离，仅适用于可信环境、无 Docker 时）。"""
-        runner_abs = os.path.abspath(_RUNNER_PATH)
-        if not os.path.isfile(runner_abs):
-            raise FileNotFoundError(f"沙箱入口脚本不存在: {runner_abs}")
-        return subprocess.run(
-            [sys.executable, "-u", runner_abs],
-            input=stdin_bytes,
-            capture_output=True,
-            timeout=60,
-            cwd=os.path.dirname(runner_abs),
-        )
-
-    def execute_task(self, db: Session, task: Task, input_params: Dict[str, Any]) -> Dict[str, Any]:
-        """每次任务在新容器（或本地子进程）中执行，执行完毕后销毁。"""
+    def _run_payload(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Run one payload in container: stdin JSON -> runner.py -> stdout JSON."""
         start = time.time()
-
-        payload = {
-            "model_type": task.model_type,
-            "model_code": task.model_code,
-            "input_params": input_params,
-        }
         stdin_bytes = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-
         try:
-            if self.sandbox_mode == "local":
-                proc = self._run_local(stdin_bytes)
-            else:
-                proc = self._run_docker(stdin_bytes)
-        except subprocess.TimeoutExpired:
-            return {
-                "type": task.model_type,
-                "status": "error",
-                "error": "执行超时",
-                "execution_time": int(time.time() - start),
-            }
-        except FileNotFoundError:
-            return {
-                "type": task.model_type,
-                "status": "error",
-                "error": f"{self.container_runtime} 不可用，请确认已安装并挂载 socket 且镜像 trusted-compute-sandbox 已构建；或设置 SANDBOX_MODE=local 使用本地执行",
-                "execution_time": int(time.time() - start),
-            }
-        except Exception as e:
-            return {
-                "type": task.model_type,
-                "status": "error",
-                "error": str(e),
-                "execution_time": int(time.time() - start),
-            }
-
-        execution_time = int(time.time() - start)
-
-        if proc.returncode != 0:
-            return {
-                "type": task.model_type,
-                "status": "error",
-                "error": (proc.stderr or proc.stdout or b"").decode("utf-8", errors="replace"),
-                "execution_time": execution_time,
-            }
-
-        try:
-            result = json.loads(proc.stdout.decode("utf-8"))
-        except Exception as e:
-            return {
-                "type": task.model_type,
-                "status": "error",
-                "error": f"解析输出失败: {e}",
-                "execution_time": execution_time,
-            }
-
-        result["execution_time"] = execution_time
-        return result
-
-    def execute_sql(
-        self,
-        data: list,
-        sql: str,
-        table_name: str = "input_data",
-        columns: Optional[List] = None,
-    ) -> Dict[str, Any]:
-        """仅执行 SQL：将 data 插入内存表后执行 sql，直接返回结果（不落库、不加密）。"""
-        start = time.time()
-        input_params: Dict[str, Any] = {"data": data, "table_name": table_name}
-        if columns is not None:
-            input_params["columns"] = columns
-        payload = {
-            "model_type": "sql",
-            "model_code": sql,
-            "input_params": input_params,
-        }
-        stdin_bytes = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-
-        try:
-            if self.sandbox_mode == "local":
-                proc = self._run_local(stdin_bytes)
-            else:
-                proc = self._run_docker(stdin_bytes)
+            proc = self._run_docker(stdin_bytes)
         except subprocess.TimeoutExpired:
             return {"status": "error", "error": "执行超时"}
         except FileNotFoundError:
             return {
                 "status": "error",
-                "error": f"{self.container_runtime} 不可用；或设置 SANDBOX_MODE=local 使用本地执行",
+                "error": f"{self.container_runtime} 不可用；请确认已安装并挂载 socket，且镜像 {self.sandbox_image} 已构建",
             }
         except Exception as e:
             return {"status": "error", "error": str(e)}
@@ -164,3 +73,43 @@ class SandboxService:
 
         out["execution_time_ms"] = int((time.time() - start) * 1000)
         return out
+
+    def execute_sql(
+        self,
+        *,
+        sql: str,
+        data: Optional[list] = None,
+        table_name: str = "input_data",
+        columns: Optional[List] = None,
+        tables: Optional[List[Dict[str, Any]]] = None,
+    ) -> Dict[str, Any]:
+        """
+        在沙箱内使用 SQLite 执行 SQL。
+        - 单表: 传 data/table_name/columns
+        - 多表: 传 tables=[{table_name, data, columns?}, ...]
+        """
+        input_params: Dict[str, Any] = {}
+        if tables is not None:
+            input_params["tables"] = tables
+        else:
+            input_params["data"] = data or []
+            input_params["table_name"] = table_name
+            if columns is not None:
+                input_params["columns"] = columns
+
+        payload = {
+            "model_type": "sql",
+            "model_code": sql,
+            "input_params": input_params,
+        }
+        return self._run_payload(payload)
+
+    def execute_python(self, *, code: str, input_params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """在沙箱内执行 Python 代码（pandas/numpy 可用）。"""
+        payload = {
+            "model_type": "python",
+            "model_code": code,
+            "input_params": input_params or {},
+        }
+        return self._run_payload(payload)
+

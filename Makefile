@@ -25,10 +25,6 @@ clean:
 build:
 	docker-compose up -d --build
 
-# 初始化数据库（如果需要）
-init-db:
-	docker-compose exec backend python -c "from database import engine, Base; Base.metadata.create_all(bind=engine)"
-
 # 查看服务状态
 status:
 	docker-compose ps

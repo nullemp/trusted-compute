@@ -1,56 +1,76 @@
-# 离线镜像资源说明
+# 离线镜像（内网部署）
 
-本目录用于存放 **预先下载好的容器镜像 tar 文件**，以便在无法访问公网 Docker Hub 的内网环境中部署本项目。
+本目录用于存放 **预构建好的镜像 tar**，以便在**内网、构建阶段也不能联网**的环境中直接加载并启动，无需执行任何 build / pip / 拉取镜像。
 
-> 说明：仓库本身不包含大体积镜像文件，需要在联网环境中由运维或开发同学提前准备好这些 tar 文件，再随安装包一起下发到内网。
+**本项目采用 Podman**：内网机器**不安装 Docker**，仅使用 Podman。联网机构建导出时可用 Podman 或 Docker。
 
-## 一、需要的基础镜像
+## 思路
 
-默认情况下，`docker-compose.yml` 使用以下镜像（可根据实际情况调整版本）：
+- **联网环境**：执行一次 `compose build`（podman compose 或 docker-compose），将生成的 `trusted-compute-backend`、`trusted-compute-sandbox` 导出为 tar，放入本目录。
+- **内网环境**：将整个项目（含 `runtime/images/*.tar`）拷贝过去，用 Podman 加载镜像后执行 `podman compose up -d --no-build`，不再访问网络。
 
-- `mariadb:11`
-- `python:3.11-slim`（通过 `PYTHON_IMAGE` 变量传入，用于构建 backend 与 sandbox 镜像）
+## 一、联网环境：构建并导出（仅需执行一次）
 
-## 二、在联网环境中导出镜像
+在能访问外网、且已安装 Podman 或 Docker 的机器上，于**项目根目录**执行：
 
-在一台可以访问公网的构建机上执行（示例）：
+### 方式 A：使用导出脚本（推荐）
+
+- **Windows (PowerShell)**：`.\scripts\export-images-for-offline.ps1`
+- **Linux / macOS**：`./scripts/export-images-for-offline.sh`
+
+脚本会执行 `compose build`，然后将 `trusted-compute-backend`、`trusted-compute-sandbox` 保存到 `runtime/images/` 下固定名称的 tar 文件。
+
+### 方式 B：手动命令
+
+使用 Podman 时（推荐，与内网一致）：
 
 ```bash
-docker pull mariadb:11
-docker pull python:3.11-slim
-
+podman compose build
 mkdir -p runtime/images
-docker save -o runtime/images/mariadb-11.tar mariadb:11
-docker save -o runtime/images/python-3.11-slim.tar python:3.11-slim
+podman save -o runtime/images/trusted-compute-backend.tar trusted-compute-backend
+podman save -o runtime/images/trusted-compute-sandbox.tar trusted-compute-sandbox
 ```
 
-然后将整个项目目录（包含 `runtime/images/*.tar`）打包，拷贝到内网环境。
+使用 Docker 时：将上述 `podman` 换为 `docker`，`podman compose` 换为 `docker-compose` 或 `docker compose`。
 
-## 三、在内网环境中导入镜像
+导出完成后，将**整个项目目录**（含 `runtime/images/*.tar`）打包，拷贝到内网。
 
-在目标内网环境的主机上（已安装 Docker 或 Podman）执行：
+## 二、内网环境：加载并启动（不联网）
+
+在目标内网机器上**仅安装 Podman**（不装 Docker），且项目已拷贝到位后：
+
+### 方式 A：使用现有启动脚本（推荐）
+
+直接运行与平时相同的启动脚本：
+
+- **Windows**：`scripts\start-for-client.cmd` 或 `scripts\start-for-client.ps1`
+- **Linux / macOS**：`scripts/start-for-client.sh`
+
+脚本会检测到 `runtime/images/` 下存在 `.tar` 文件，先执行 `load` 加载镜像，再执行 `compose up -d --no-build`，**不会发起任何构建或拉取**。
+
+### 方式 B：手动命令（内网统一用 Podman）
 
 ```bash
 cd /path/to/trusted-compute
 
-docker load -i runtime/images/mariadb-11.tar
-docker load -i runtime/images/python-3.11-slim.tar
+# 加载镜像
+podman load -i runtime/images/trusted-compute-backend.tar
+podman load -i runtime/images/trusted-compute-sandbox.tar
+
+# 仅启动，不构建
+podman compose up -d --no-build
+# 或：podman-compose up -d --no-build
 ```
 
-导入成功后，再执行：
+## 三、镜像与文件对应关系
 
-```bash
-docker-compose up -d --build
-```
+| 镜像名 | 导出文件名（脚本默认） |
+|--------|------------------------|
+| trusted-compute-backend | runtime/images/trusted-compute-backend.tar |
+| trusted-compute-sandbox | runtime/images/trusted-compute-sandbox.tar |
 
-由于基础镜像已经在本地镜像缓存中，构建和启动过程不会再访问公网。
+启动脚本会加载 `runtime/images/` 下所有 `.tar`，再根据是否存在这些镜像决定是否使用 `--no-build`。
 
-> 若使用 Podman，可将上述命令中的 `docker` 替换为 `podman`。
+## 四、版本变更时
 
-## 四、镜像版本变更时的注意事项
-
-- 若修改了 `docker-compose.yml` 中的 `MARIADB_IMAGE` 或 `PYTHON_IMAGE` 变量，或 backend/sandbox 的 `Dockerfile` 基础镜像，请同步更新：
-  - 联网环境中的 `docker pull` / `docker save` 命令；
-  - 本目录下 tar 文件的文件名（建议包含版本号，便于区分）。
-- 确保离线环境导入的镜像版本与 compose/Dockerfile 中引用的版本一致。
-
+若修改了 Dockerfile、requirements、或 compose 中的镜像名，需在**联网环境**重新执行“一、构建并导出”，并更新内网环境中的 tar 文件后，再在内网重新 load 并 `up -d --no-build`。

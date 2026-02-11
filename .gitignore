@@ -37,3 +37,6 @@ yarn-error.log*
 runtime/images/*.tar
 runtime/docker/
 runtime/podman/
+
+# Offline pip wheels (pip download for client-simulator; do not commit)
+client-simulator/offline_wheels/

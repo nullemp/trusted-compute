@@ -1,28 +1,7 @@
 version: '3.8'
 
 services:
-  # Database: MariaDB (application tables and business data)
-  mariadb:
-    image: ${MARIADB_IMAGE:-mariadb:11}
-    container_name: trusted-compute-db
-    command: ["mariadbd", "--local-infile=1"]  # Required for LOAD DATA LOCAL INFILE (file upload into DB)
-    environment:
-      MARIADB_ROOT_PASSWORD: root_pass
-      MARIADB_DATABASE: trusted_compute_db
-      MARIADB_USER: trusted_compute
-      MARIADB_PASSWORD: trusted_compute_pass
-    ports:
-      - "3306:3306"
-    volumes:
-      - mariadb_data:/var/lib/mysql
-      - ./backend/mariadb-init/02-grant-create.sql:/docker-entrypoint-initdb.d/02-grant-create.sql:ro
-    healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Build sandbox image only; not long-running. Backend starts it with docker run --rm per task
+  # Build sandbox image only; not long-running. Backend starts it with docker run --rm per task.
   sandbox:
     build:
       context: ./backend/sandbox
@@ -38,21 +17,15 @@ services:
       dockerfile: Dockerfile
       args:
         PYTHON_IMAGE: ${PYTHON_IMAGE:-python:3.11-slim}
+    image: trusted-compute-backend
     container_name: trusted-compute-backend
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: mysql+pymysql://trusted_compute:trusted_compute_pass@mariadb:3306/trusted_compute_db
-      SECRET_KEY: your-secret-key-change-in-production
       SANDBOX_IMAGE: trusted-compute-sandbox
       CONTAINER_RUNTIME: ${CONTAINER_RUNTIME:-docker}
     volumes:
       - ./backend:/app
       - /var/run/docker.sock:/var/run/docker.sock
-    depends_on:
-      mariadb:
-        condition: service_healthy
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
-volumes:
-  mariadb_data:

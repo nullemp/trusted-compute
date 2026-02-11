@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# Build backend + sandbox images and export to runtime/images for offline deployment.
+# Run from project root (online). Uses Podman or Docker; offline side uses Podman only. Network required for first build.
+set -e
+cd "$(dirname "$0")/.."
+
+RUNTIME_ROOT="${BUNDLED_RUNTIME_ROOT:-$PWD/runtime}"
+IMAGES_DIR="$RUNTIME_ROOT/images"
+BUNDLED_PODMAN="$RUNTIME_ROOT/podman/podman"
+BUNDLED_DOCKER="$RUNTIME_ROOT/docker/docker"
+
+RUNTIME=""
+if [[ -x "$BUNDLED_PODMAN" ]]; then
+  export PATH="$(dirname "$BUNDLED_PODMAN"):$PATH"
+  RUNTIME=podman
+  export CONTAINER_RUNTIME=podman
+elif [[ -x "$BUNDLED_DOCKER" ]]; then
+  export PATH="$(dirname "$BUNDLED_DOCKER"):$PATH"
+  RUNTIME=docker
+elif command -v podman &>/dev/null; then
+  RUNTIME=podman
+  export CONTAINER_RUNTIME=podman
+elif command -v docker &>/dev/null; then
+  RUNTIME=docker
+fi
+if [[ -z "$RUNTIME" ]]; then
+  echo "No podman or docker found."
+  exit 1
+fi
+
+export PYTHON_IMAGE="${PYTHON_IMAGE:-docker.m.daocloud.io/library/python:3.11-slim}"
+export DOCKER_BUILDKIT=0
+export COMPOSE_DOCKER_CLI_BUILD=0
+
+echo "Building images with $RUNTIME (this requires network)..."
+if [[ "$RUNTIME" == "podman" ]]; then
+  if podman compose version &>/dev/null; then
+    podman compose build
+  else
+    podman-compose build
+  fi
+else
+  if docker compose version &>/dev/null; then
+    docker compose build
+  else
+    docker-compose build
+  fi
+fi
+
+mkdir -p "$IMAGES_DIR"
+echo "Saving images to $IMAGES_DIR ..."
+$RUNTIME save -o "$IMAGES_DIR/trusted-compute-backend.tar" trusted-compute-backend
+$RUNTIME save -o "$IMAGES_DIR/trusted-compute-sandbox.tar" trusted-compute-sandbox
+echo "Done. Copy the project (including runtime/images/*.tar) to the offline environment and run the usual start script."
