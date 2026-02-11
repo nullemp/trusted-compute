@@ -68,6 +68,9 @@ def execute_sql_mariadb(
     cursor = None
     try:
         cursor = conn.cursor()
+        db_name = getattr(engine.url, "database", None)
+        if db_name:
+            cursor.execute(f"USE `{db_name}`")
         cursor.execute(create_sql)
 
         # Batch insert
@@ -274,6 +277,9 @@ def execute_sql_from_file(
     cursor = None
     try:
         cursor = conn.cursor()
+        db_name = getattr(engine.url, "database", None)
+        if db_name:
+            cursor.execute(f"USE `{db_name}`")
         cursor.execute(create_sql)
         cursor.execute(load_sql)
 
@@ -403,6 +409,10 @@ def execute_sql_from_files(
     table_names = [s[0] for s in steps]
     try:
         cursor = conn.cursor()
+        # Ensure a database is selected (required for CREATE TEMPORARY TABLE).
+        db_name = getattr(engine.url, "database", None)
+        if db_name:
+            cursor.execute(f"USE `{db_name}`")
         for _, create_sql, load_sql in steps:
             cursor.execute(create_sql)
             cursor.execute(load_sql)

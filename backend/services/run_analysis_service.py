@@ -6,6 +6,8 @@ import json
 import os
 import re
 import uuid
+from decimal import Decimal
+from datetime import date, datetime
 from typing import List, Any, Dict, Optional
 
 from database import engine
@@ -18,6 +20,17 @@ from services.execute_sql_service import (
 from services import sandbox_service
 
 _COL_TYPE = "TEXT"
+
+
+def _json_serializable(val: Any) -> Any:
+    """Convert DB result values (Decimal, datetime, etc.) to JSON-serializable types."""
+    if isinstance(val, Decimal):
+        return float(val)
+    if isinstance(val, (datetime, date)):
+        return val.isoformat()
+    if isinstance(val, (list, tuple)):
+        return [_json_serializable(v) for v in val]
+    return val
 
 
 def _job_db_name() -> str:
@@ -206,7 +219,7 @@ def run_analysis(
         if cursor.description:
             result_columns = [d[0] for d in cursor.description]
             result_rows = cursor.fetchall()
-            data_for_python = [list(r) for r in result_rows]
+            data_for_python = [_json_serializable(list(r)) for r in result_rows]
         else:
             result_columns = []
             data_for_python = []
@@ -216,13 +229,11 @@ def run_analysis(
             "model_code": analysis_python,
             "input_params": {"data": data_for_python, "columns": result_columns, "table_name": "data"},
         }
-        sandbox = sandbox_service.SandboxService()
-        import io
         stdin_bytes = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-        if sandbox.sandbox_mode == "local":
-            proc = sandbox._run_local(stdin_bytes)
+        if sandbox_service.sandbox_mode == "local":
+            proc = sandbox_service._run_local(stdin_bytes)
         else:
-            proc = sandbox._run_docker(stdin_bytes)
+            proc = sandbox_service._run_docker(stdin_bytes)
 
         if proc.returncode != 0:
             return {

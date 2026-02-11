@@ -26,7 +26,8 @@ class SandboxService:
 
     def _run_docker(self, stdin_bytes: bytes) -> subprocess.CompletedProcess:
         """Run in Docker/Podman container (host must have runtime and socket mounted)."""
-        return subprocess.run(
+        print(f"Sandbox: starting container image={self.sandbox_image} runtime={self.container_runtime}", flush=True)
+        result = subprocess.run(
             [
                 self.container_runtime,
                 "run",
@@ -39,6 +40,8 @@ class SandboxService:
             capture_output=True,
             timeout=60,
         )
+        print(f"Sandbox: container finished exit_code={result.returncode}", flush=True)
+        return result
 
     def _run_local(self, stdin_bytes: bytes) -> subprocess.CompletedProcess:
         """使用当前环境 Python 子进程执行 runner.py（无隔离，仅适用于可信环境、无 Docker 时）。"""
