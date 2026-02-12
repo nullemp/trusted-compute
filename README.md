@@ -13,7 +13,7 @@
 | **backend** | FastAPI：提供 REST API，接收请求后通过 `podman run --rm -i` 启动沙箱容器执行 SQL/Python，返回结果。 | 8000 |
 | **sandbox** | 仅用于**构建镜像**，非长驻服务。每次执行时由 backend 启动临时容器，执行完即删除。 | - |
 
-- 无独立前端，通过**调用 API** 或运行 **examples / client-simulator** 使用。
+- 无独立前端，通过**调用 API** 或运行 **examples** 中的脚本使用。
 - 技术栈：Python FastAPI、Podman 沙箱（每次请求起一个容器）。
 
 ---
@@ -93,19 +93,17 @@ docker compose down
 
 - 先启动服务（见第 2 节），再执行：  
   `python examples/run_sql_examples.py`  
-  脚本会读取 `client-simulator/data/` 下 CSV，构造多表请求调用 `POST /api/execute-sql`。
-
-**client-simulator 一键示例**
-
-- 进入 `client-simulator`，执行对应脚本，会先等待 API 就绪，再运行 `examples/run_sql_examples.py`：
-  - Windows：`client-simulator\run_tests.cmd` 或 `client-simulator\run_tests.ps1`
-  - Linux/macOS：`cd client-simulator && ./run_tests.sh`
-
-依赖：`pip install -r client-simulator/requirements.txt`（主要含 `requests`）。
+  脚本会读取 `examples/data/` 下 CSV，构造多表请求调用 `POST /api/execute-sql`。  
+  可选：先运行 `python examples/wait_for_api.py` 等待 API 就绪，再运行上述示例。  
+- **依赖安装**（运行前需执行一次）：
+  - 有网：`pip install -r examples/requirements.txt`（或 `python -m pip install -r examples/requirements.txt`）
+  - 使用项目内离线包（无 PyPI 或已拷贝 `examples/offline_wheels/`）：  
+    `pip install --no-index --find-links=examples/offline_wheels -r examples/requirements.txt`  
+    （或 `python -m pip install --no-index --find-links=examples/offline_wheels -r examples/requirements.txt`）
 
 ### 4.3 内网部署（构建也不联网）
 
-在联网环境执行一次 `scripts/export-images-for-offline.ps1`（或 `.sh`），将生成的 `runtime/images/*.tar` 随项目拷贝到内网；内网运行相同启动脚本即可，无需再构建或拉取。backend/sandbox 的 requirements 已打进镜像；若内网还要跑 Python 示例脚本且无 PyPI，需在联网机用 `pip download -r client-simulator/requirements.txt -d client-simulator/offline_wheels` 下载 wheel 后一并拷贝，内网用 `pip install --no-index --find-links=client-simulator/offline_wheels -r client-simulator/requirements.txt` 安装。详见 [docs/OFFLINE_DEPLOY.md](docs/OFFLINE_DEPLOY.md) 与 [runtime/images/README.md](runtime/images/README.md)。
+在联网环境执行一次 `scripts\export-images-for-offline.cmd`（Windows，推荐）或 `scripts/export-images-for-offline.sh`（Linux/macOS）：会构建并导出 `runtime/images/*.tar`，并**顺带打包** examples 的 Python 依赖到 `examples/offline_wheels/`（需本机已安装 Python/pip）；将整份项目（含上述内容）拷贝到内网后，用相同启动脚本即可 load 并启动，无需再构建或拉取。若导出时未装 Python、未生成 `offline_wheels`，可稍后在同一联网机运行 `scripts\download-examples-wheels.cmd`（Windows）或 `scripts/download-examples-wheels.sh` 补打；内网安装示例依赖：`pip install --no-index --find-links=examples/offline_wheels -r examples/requirements.txt`。详见 [docs/OFFLINE_DEPLOY.md](docs/OFFLINE_DEPLOY.md) 与 [runtime/images/README.md](runtime/images/README.md)。
 
 ### 4.4 环境变量（可选）
 

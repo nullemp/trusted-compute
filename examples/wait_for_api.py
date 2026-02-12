@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Poll until API is ready; for client sim to call before sending requests."""
+"""Poll until API is ready; run before examples that call the API."""
 import os
 import sys
 import time

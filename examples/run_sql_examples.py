@@ -19,12 +19,13 @@ if sys.platform == "win32":
 try:
     import requests
 except ImportError:
-    print("请安装: pip install requests", file=sys.stderr)
+    print("请先安装依赖: pip install -r examples/requirements.txt", file=sys.stderr)
+    print("若使用项目内离线包: pip install --no-index --find-links=examples/offline_wheels -r examples/requirements.txt", file=sys.stderr)
     sys.exit(1)
 
 BASE = os.environ.get("TRUSTED_COMPUTE_API", "http://localhost:8000").rstrip("/")
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(SCRIPT_DIR, "..", "client-simulator", "data")
+DATA_DIR = os.path.join(SCRIPT_DIR, "data")
 if not os.path.isdir(DATA_DIR):
     DATA_DIR = SCRIPT_DIR
 

@@ -38,5 +38,7 @@ runtime/images/*.tar
 runtime/docker/
 runtime/podman/
 
-# Offline pip wheels (pip download for client-simulator; do not commit)
-client-simulator/offline_wheels/
+# Offline pip wheels (pip download for examples; do not commit)
+examples/offline_wheels/
+
+*.AppxBundle

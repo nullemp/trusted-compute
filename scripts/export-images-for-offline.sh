@@ -51,4 +51,11 @@ mkdir -p "$IMAGES_DIR"
 echo "Saving images to $IMAGES_DIR ..."
 $RUNTIME save -o "$IMAGES_DIR/trusted-compute-backend.tar" trusted-compute-backend
 $RUNTIME save -o "$IMAGES_DIR/trusted-compute-sandbox.tar" trusted-compute-sandbox
-echo "Done. Copy the project (including runtime/images/*.tar) to the offline environment and run the usual start script."
+
+# Package examples Python wheels for offline install (run examples scripts without PyPI)
+echo "Downloading examples Python wheels for offline install..."
+if ! "$(dirname "$0")/download-examples-wheels.sh"; then
+  echo "Warning: Examples wheels could not be downloaded (e.g. Python/pip not found). To package them later, run: scripts/download-examples-wheels.sh"
+fi
+
+echo "Done. Copy the project (including runtime/images/*.tar and, if present, examples/offline_wheels/) to the offline environment and run the usual start script."

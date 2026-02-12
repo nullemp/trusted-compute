@@ -15,10 +15,10 @@
 
 ### 方式 A：使用导出脚本（推荐）
 
-- **Windows (PowerShell)**：`.\scripts\export-images-for-offline.ps1`
+- **Windows**：`scripts\export-images-for-offline.cmd`（推荐）或 `.\scripts\export-images-for-offline.ps1`
 - **Linux / macOS**：`./scripts/export-images-for-offline.sh`
 
-脚本会执行 `compose build`，然后将 `trusted-compute-backend`、`trusted-compute-sandbox` 保存到 `runtime/images/` 下固定名称的 tar 文件。
+脚本会执行 `compose build`，将 `trusted-compute-backend`、`trusted-compute-sandbox` 保存到 `runtime/images/` 下；若本机已安装 Python/pip，会顺带将 examples 的 Python 依赖打包到 `examples/offline_wheels/`。
 
 ### 方式 B：手动命令
 
@@ -33,7 +33,7 @@ podman save -o runtime/images/trusted-compute-sandbox.tar trusted-compute-sandbo
 
 使用 Docker 时：将上述 `podman` 换为 `docker`，`podman compose` 换为 `docker-compose` 或 `docker compose`。
 
-导出完成后，将**整个项目目录**（含 `runtime/images/*.tar`）打包，拷贝到内网。
+导出完成后，将**整个项目目录**（含 `runtime/images/*.tar`，若有 `examples/offline_wheels/` 也一并拷贝）打包到内网。
 
 ## 二、内网环境：加载并启动（不联网）
 
