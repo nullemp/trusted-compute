@@ -78,6 +78,7 @@ class SandboxService:
         self,
         *,
         sql: str,
+        ddl: Optional[str] = None,
         data: Optional[list] = None,
         table_name: str = "input_data",
         columns: Optional[List] = None,
@@ -85,10 +86,13 @@ class SandboxService:
     ) -> Dict[str, Any]:
         """
         在沙箱内使用 SQLite 执行 SQL。
+        - 可选 ddl: 先执行 DDL 建表，再按 tables 插入数据。
         - 单表: 传 data/table_name/columns
         - 多表: 传 tables=[{table_name, data, columns?}, ...]
         """
         input_params: Dict[str, Any] = {}
+        if ddl:
+            input_params["ddl"] = ddl
         if tables is not None:
             input_params["tables"] = tables
         else:

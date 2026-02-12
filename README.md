@@ -79,22 +79,13 @@ docker compose down
 
 交互式文档：浏览器打开 <http://localhost:8000/docs>。
 
-### 4.2 运行示例
+### 4.2 运行示例（演示）
 
-**快速验证（推荐）**
-
-- **Windows**：在项目根目录执行  
-  `examples\test_sql.cmd`  
-  （内部用 PowerShell 调 `test_sql.ps1`，会先 GET `/` 再 POST `/api/execute-sql`，并打印结果。）
-- **PowerShell**：`.\examples\test_sql.ps1`
-- **Python**：`python examples/test_sql.py`
-
-**多表 + 多条 SQL 示例**
-
-- 先启动服务（见第 2 节），再执行：  
-  `python examples/run_sql_examples.py`  
-  脚本会读取 `examples/data/` 下 CSV，构造多表请求调用 `POST /api/execute-sql`。  
-  可选：先运行 `python examples/wait_for_api.py` 等待 API 就绪，再运行上述示例。  
+- 先启动服务（见第 2 节），在项目根目录执行：  
+  `python examples/demo.py`  
+  （或 `python examples/run_sql_examples.py`，逻辑相同。）  
+  演示脚本会读取 **examples/data/dbprofile.sql**（建表 DDL）、**users.csv / orders.csv**（数据）、**query.sql**（要执行的 SQL），调用 `POST /api/execute-sql` 并打印结果。  
+  可选：先运行 `python examples/wait_for_api.py` 等待 API 就绪。  
 - **依赖安装**（运行前需执行一次）：
   - 有网：`pip install -r examples/requirements.txt`（或 `python -m pip install -r examples/requirements.txt`）
   - 使用项目内离线包（无 PyPI 或已拷贝 `examples/offline_wheels/`）：  

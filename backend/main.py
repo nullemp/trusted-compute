@@ -32,20 +32,18 @@ async def root():
 async def execute_sql(req: ExecuteSqlRequest):
     """
     在沙箱内用 SQLite 执行 SQL，结果直接返回。
+    - 可选 ddl：建表依据（如 dbprofile.sql 内容），再按 tables 插入数据。
     - 单表：传 data + table_name(可选) + columns(可选)
     - 多表：传 tables=[{table_name, data, columns?}, ...]
     """
-    if req.tables is not None:
-        tables = [t.model_dump() for t in req.tables]
-        return sandbox_service.execute_sql(
-            sql=req.sql,
-            tables=tables,
-        )
+    tables = [t.model_dump() for t in req.tables] if req.tables is not None else None
     return sandbox_service.execute_sql(
         sql=req.sql,
+        ddl=req.ddl,
         data=req.data or [],
         table_name=req.table_name or "input_data",
         columns=req.columns,
+        tables=tables,
     )
 
 

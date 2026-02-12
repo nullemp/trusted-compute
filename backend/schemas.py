@@ -15,9 +15,12 @@ class TableSpec(BaseModel):
 
 
 class ExecuteSqlRequest(BaseModel):
-    """沙箱 SQL 请求：支持单表或多表（tables）。"""
+    """沙箱 SQL 请求：支持 DDL 建表 + 多表数据（tables）或单表（data）。"""
 
     sql: str = Field(..., description="要执行的 SQL 语句")
+    ddl: Optional[str] = Field(
+        None, description="可选：建表 DDL（如 dbprofile.sql 内容）；提供时先执行 DDL，再按 tables 插入数据（不自动建表）"
+    )
     # 单表模式
     data: Optional[List[JsonRow]] = Field(
         None, description="单表数据；与 table_name/columns 搭配使用"

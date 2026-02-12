@@ -80,7 +80,7 @@ pip install --no-index --find-links=examples/offline_wheels -r examples/requirem
 
 若内网有**内网 pip 源**，也可直接在内网执行 `pip install -r examples/requirements.txt`，无需上述 download 步骤。
 
-仅用 `examples/test_sql.cmd`（PowerShell 调用接口、不依赖 Python 的 requests）时，本机可不装 Python 依赖。
+若不运行 `examples/demo.py` 等依赖 requests 的示例，本机可不装 Python 依赖。
 
 ## 总结
 
