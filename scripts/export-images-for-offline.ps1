@@ -91,6 +91,21 @@ if ($LASTEXITCODE -ne 0) { Write-Error "Failed to save trusted-compute-backend";
 & $runtime save -o $SandboxTar trusted-compute-sandbox
 if ($LASTEXITCODE -ne 0) { Write-Error "Failed to save trusted-compute-sandbox"; exit 1 }
 
+# MariaDB: 沙箱按需启动的 DB 容器用此镜像；预拉取并导出。未设 MARIADB_IMAGE 时用国内镜像避免 Docker Hub 超时
+$MariadbSaveTag = "docker.io/library/mariadb:11.2"
+$MariadbPull = $env:MARIADB_IMAGE
+if ([string]::IsNullOrWhiteSpace($MariadbPull)) { $MariadbPull = "docker.m.daocloud.io/library/mariadb:11.2" }
+$MariadbTar = Join-Path $ImagesDir "mariadb.tar"
+Write-Host "Pulling MariaDB from $MariadbPull and saving as $MariadbSaveTag for offline sandbox DB..." -ForegroundColor Cyan
+& $runtime pull $MariadbPull
+if ($LASTEXITCODE -ne 0) { Write-Error "Failed to pull $MariadbPull"; exit 1 }
+if ($MariadbPull -ne $MariadbSaveTag) {
+    & $runtime tag $MariadbPull $MariadbSaveTag
+    if ($LASTEXITCODE -ne 0) { Write-Error "Failed to tag MariaDB image"; exit 1 }
+}
+& $runtime save -o $MariadbTar $MariadbSaveTag
+if ($LASTEXITCODE -ne 0) { Write-Error "Failed to save MariaDB image"; exit 1 }
+
 # Package examples Python wheels for offline install (run examples scripts without PyPI)
 Write-Host "Downloading examples Python wheels for offline install..." -ForegroundColor Cyan
 & $PSScriptRoot\download-examples-wheels.ps1

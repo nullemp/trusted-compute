@@ -15,8 +15,9 @@ class TableSpec(BaseModel):
 
 
 class ExecuteSqlRequest(BaseModel):
-    """沙箱 SQL 请求：支持 DDL 建表 + 多表数据（tables）或单表（data）。"""
+    """沙箱 SQL 请求：需指定 sandbox_id（实例隔离），支持 DDL 建表 + 多表/单表数据。"""
 
+    sandbox_id: str = Field(..., description="沙箱 ID，由 POST /api/sandboxes 创建")
     sql: str = Field(..., description="要执行的 SQL 语句")
     ddl: Optional[str] = Field(
         None, description="可选：建表 DDL（如 dbprofile.sql 内容）；提供时先执行 DDL，再按 tables 插入数据（不自动建表）"

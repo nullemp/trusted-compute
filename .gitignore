@@ -31,7 +31,6 @@ yarn-error.log*
 
 # Database
 *.db
-*.sqlite
 
 # Runtime (large binaries; use scripts/pull-images or installers, do not commit)
 runtime/images/*.tar

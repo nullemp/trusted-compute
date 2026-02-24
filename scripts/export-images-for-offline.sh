@@ -52,6 +52,16 @@ echo "Saving images to $IMAGES_DIR ..."
 $RUNTIME save -o "$IMAGES_DIR/trusted-compute-backend.tar" trusted-compute-backend
 $RUNTIME save -o "$IMAGES_DIR/trusted-compute-sandbox.tar" trusted-compute-sandbox
 
+# MariaDB: 沙箱按需启动的 DB 容器用此镜像；未设 MARIADB_IMAGE 时用国内镜像避免 Docker Hub 超时
+MARIADB_SAVE_TAG="docker.io/library/mariadb:11.2"
+MARIADB_PULL="${MARIADB_IMAGE:-docker.m.daocloud.io/library/mariadb:11.2}"
+echo "Pulling MariaDB from $MARIADB_PULL and saving as $MARIADB_SAVE_TAG for offline sandbox DB..."
+$RUNTIME pull "$MARIADB_PULL"
+if [[ "$MARIADB_PULL" != "$MARIADB_SAVE_TAG" ]]; then
+  $RUNTIME tag "$MARIADB_PULL" "$MARIADB_SAVE_TAG"
+fi
+$RUNTIME save -o "$IMAGES_DIR/mariadb.tar" "$MARIADB_SAVE_TAG"
+
 # Package examples Python wheels for offline install (run examples scripts without PyPI)
 echo "Downloading examples Python wheels for offline install..."
 if ! "$(dirname "$0")/download-examples-wheels.sh"; then

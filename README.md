@@ -1,6 +1,6 @@
 # Trusted Compute Sandbox
 
-沙箱计算服务：在**隔离容器**内执行 SQL（SQLite）与 Python，结果直接返回，不落盘、无持久化数据库。
+沙箱计算服务：**实例隔离**（推荐）— 每个沙箱对应独立 MariaDB 容器与数据卷，销毁时删除容器与卷；在沙箱内执行 SQL 与 Python。
 
 ---
 
@@ -10,8 +10,8 @@
 
 | 服务 | 说明 | 端口 |
 |------|------|------|
-| **backend** | FastAPI：提供 REST API，接收请求后通过 `podman run --rm -i` 启动沙箱容器执行 SQL/Python，返回结果。 | 8000 |
-| **sandbox** | 仅用于**构建镜像**，非长驻服务。每次执行时由 backend 启动临时容器，执行完即删除。 | - |
+| **backend** | FastAPI：提供 REST API；创建/销毁沙箱（独立 DB 容器+卷）、在沙箱内执行 SQL/Python。 | 8000 |
+| **sandbox** | 仅用于**构建镜像**，非长驻服务。执行 SQL 时由 backend 启动临时 runner 容器，连到该沙箱的 DB 容器。 | - |
 
 - 无独立前端，通过**调用 API** 或运行 **examples** 中的脚本使用。
 - 技术栈：Python FastAPI、Podman 沙箱（每次请求起一个容器）。
@@ -74,8 +74,10 @@ docker compose down
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | GET | `/` | 健康检查，返回 API 名称与版本。 |
-| POST | `/api/execute-sql` | 在沙箱内用 SQLite 执行 SQL，结果直接返回。支持单表或多表，见 [docs/SQL_USAGE.md](docs/SQL_USAGE.md)。 |
-| POST | `/api/execute-python` | 在沙箱内执行 Python 代码（可用的 pandas/numpy），代码末尾需设置 `result` 变量，结果直接返回。 |
+| POST | `/api/sandboxes` | 创建沙箱：启动独立 MariaDB 容器并绑定数据卷，返回 `sandbox_id`。 |
+| DELETE | `/api/sandboxes/{sandbox_id}` | 销毁沙箱：停止并删除 DB 容器与关联数据卷。 |
+| POST | `/api/execute-sql` | 在指定沙箱的 MariaDB 中执行 SQL（需传 `sandbox_id`）。支持单表或多表，见 [docs/SQL_USAGE.md](docs/SQL_USAGE.md)。 |
+| POST | `/api/execute-python` | 在沙箱内执行 Python 代码（pandas/numpy），代码末尾需设置 `result` 变量，结果直接返回。 |
 
 交互式文档：浏览器打开 <http://localhost:8000/docs>。
 
@@ -94,13 +96,14 @@ docker compose down
 
 ### 4.3 内网部署（构建也不联网）
 
-在联网环境执行一次 `scripts\export-images-for-offline.cmd`（Windows，推荐）或 `scripts/export-images-for-offline.sh`（Linux/macOS）：会构建并导出 `runtime/images/*.tar`，并**顺带打包** examples 的 Python 依赖到 `examples/offline_wheels/`（需本机已安装 Python/pip）；将整份项目（含上述内容）拷贝到内网后，用相同启动脚本即可 load 并启动，无需再构建或拉取。若导出时未装 Python、未生成 `offline_wheels`，可稍后在同一联网机运行 `scripts\download-examples-wheels.cmd`（Windows）或 `scripts/download-examples-wheels.sh` 补打；内网安装示例依赖：`pip install --no-index --find-links=examples/offline_wheels -r examples/requirements.txt`。详见 [docs/OFFLINE_DEPLOY.md](docs/OFFLINE_DEPLOY.md) 与 [runtime/images/README.md](runtime/images/README.md)。
+在联网环境执行一次 `scripts\export-images-for-offline.cmd`（Windows，推荐）或 `scripts/export-images-for-offline.sh`（Linux/macOS）：会构建并导出 `runtime/images/*.tar`（含 **mariadb.tar**，沙箱 DB 用）、并**顺带打包** examples 的 Python 依赖到 `examples/offline_wheels/`（需本机已安装 Python/pip）；将整份项目（含上述内容）拷贝到内网后，用相同启动脚本即可**预加载所有镜像（含 MariaDB）**并启动，无需再构建或拉取，首次创建沙箱也无需联网。若导出时未装 Python、未生成 `offline_wheels`，可稍后在同一联网机运行 `scripts\download-examples-wheels.cmd`（Windows）或 `scripts/download-examples-wheels.sh` 补打；内网安装示例依赖：`pip install --no-index --find-links=examples/offline_wheels -r examples/requirements.txt`。详见 [docs/OFFLINE_DEPLOY.md](docs/OFFLINE_DEPLOY.md) 与 [runtime/images/README.md](runtime/images/README.md)。
 
 ### 4.4 环境变量（可选）
 
 - `TRUSTED_COMPUTE_API`：API 根地址，默认 `http://localhost:8000`。示例脚本会读取该变量。
 - `BUNDLED_RUNTIME_ROOT`：覆盖运行时根目录（默认使用项目下 `runtime/`）。详见 [ENV_VARS_WINDOWS.md](ENV_VARS_WINDOWS.md)。
 - `USE_OFFICIAL_HUB=1`：从 Docker Hub 拉取基础镜像（默认可能使用国内镜像）。仅联网构建时有效。
+- **实例隔离**：`MARIADB_ROOT_PASSWORD`（沙箱 DB 的 root 密码）、`MARIADB_IMAGE`（MariaDB 镜像）、`SANDBOX_NETWORK`（沙箱 DB 容器加入的网络）。
 - Windows 下使用 Podman 若出现 WSL 相关提示，可参考 [WSL_SETUP_WINDOWS.md](WSL_SETUP_WINDOWS.md)。
 
 ---

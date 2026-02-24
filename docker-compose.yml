@@ -1,5 +1,6 @@
 version: '3.8'
 
+# 实例隔离：无共享 MariaDB；每个沙箱由 POST /api/sandboxes 启动独立 DB 容器+卷，DELETE 销毁容器与卷。
 services:
   # Build sandbox image only; not long-running. Backend starts it with docker run --rm per task.
   sandbox:
@@ -10,6 +11,8 @@ services:
         PYTHON_IMAGE: ${PYTHON_IMAGE:-python:3.11-slim}
     image: trusted-compute-sandbox
     command: ["true"]
+    networks:
+      - trusted-compute-net
 
   backend:
     build:
@@ -24,8 +27,17 @@ services:
     environment:
       SANDBOX_IMAGE: trusted-compute-sandbox
       CONTAINER_RUNTIME: ${CONTAINER_RUNTIME:-docker}
+      SANDBOX_NETWORK: trusted-compute_default
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-trusted_compute_root}
+      MARIADB_IMAGE: ${MARIADB_IMAGE:-docker.io/library/mariadb:11.2}
     volumes:
       - ./backend:/app
       - /var/run/docker.sock:/var/run/docker.sock
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - trusted-compute-net
+
+networks:
+  trusted-compute-net:
+    name: trusted-compute_default
 

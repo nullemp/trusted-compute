@@ -1,0 +1,4226 @@
+{
+  "metadata": {
+    "description": "MariaDB/MySQL dump in JSON (schema + data)",
+    "generated": "2026-02-24T09:12:37Z",
+    "source": "gen_enterprise_data.py"
+  },
+  "schema": {
+    "departments": "CREATE TABLE IF NOT EXISTS departments (\n  id INT,\n  name VARCHAR(255),\n  parent_id INT,\n  budget DOUBLE,\n  region VARCHAR(64)\n);",
+    "employees": "CREATE TABLE IF NOT EXISTS employees (\n  id INT,\n  name VARCHAR(255),\n  dept_id INT,\n  job_title VARCHAR(128),\n  salary DOUBLE,\n  hire_date VARCHAR(32)\n);",
+    "projects": "CREATE TABLE IF NOT EXISTS projects (\n  id INT,\n  name VARCHAR(255),\n  dept_id INT,\n  manager_id INT,\n  budget DOUBLE,\n  start_date VARCHAR(32),\n  end_date VARCHAR(32),\n  status VARCHAR(64)\n);",
+    "products": "CREATE TABLE IF NOT EXISTS products (\n  id INT,\n  name VARCHAR(255),\n  category VARCHAR(128),\n  unit_price DOUBLE\n);",
+    "sales_orders": "CREATE TABLE IF NOT EXISTS sales_orders (\n  id INT,\n  customer_name VARCHAR(255),\n  employee_id INT,\n  product_id INT,\n  quantity INT,\n  order_date VARCHAR(32),\n  amount DOUBLE\n);"
+  },
+  "data": {
+    "departments": [
+      {
+        "id": 1,
+        "name": "华东销售部",
+        "parent_id": null,
+        "budget": 337.74,
+        "region": "华东"
+      },
+      {
+        "id": 2,
+        "name": "华南销售部",
+        "parent_id": 1,
+        "budget": 160.2,
+        "region": "华南"
+      },
+      {
+        "id": 3,
+        "name": "华北销售部",
+        "parent_id": 1,
+        "budget": 354.51,
+        "region": "华中"
+      },
+      {
+        "id": 4,
+        "name": "西南销售部",
+        "parent_id": 1,
+        "budget": 315.72,
+        "region": "华东"
+      },
+      {
+        "id": 5,
+        "name": "研发一部",
+        "parent_id": 1,
+        "budget": 92.16,
+        "region": "华南"
+      },
+      {
+        "id": 6,
+        "name": "研发二部",
+        "parent_id": 5,
+        "budget": 320.91,
+        "region": "华中"
+      },
+      {
+        "id": 7,
+        "name": "产品部",
+        "parent_id": 2,
+        "budget": 372.21,
+        "region": "西北"
+      },
+      {
+        "id": 8,
+        "name": "市场部",
+        "parent_id": 5,
+        "budget": 238.78,
+        "region": "西南"
+      },
+      {
+        "id": 9,
+        "name": "人力资源部",
+        "parent_id": 5,
+        "budget": 414.24,
+        "region": "华东"
+      },
+      {
+        "id": 10,
+        "name": "财务部",
+        "parent_id": 3,
+        "budget": 364.16,
+        "region": "华北"
+      },
+      {
+        "id": 11,
+        "name": "运营部",
+        "parent_id": 5,
+        "budget": 119.97,
+        "region": "东北"
+      },
+      {
+        "id": 12,
+        "name": "客服部",
+        "parent_id": 6,
+        "budget": 95.99,
+        "region": "西南"
+      },
+      {
+        "id": 13,
+        "name": "供应链部",
+        "parent_id": 2,
+        "budget": 211.54,
+        "region": "华北"
+      },
+      {
+        "id": 14,
+        "name": "法务部",
+        "parent_id": 10,
+        "budget": 169.03,
+        "region": "华东"
+      },
+      {
+        "id": 15,
+        "name": "华东销售部-15",
+        "parent_id": 12,
+        "budget": 256.74,
+        "region": "华东"
+      },
+      {
+        "id": 16,
+        "name": "华南销售部-16",
+        "parent_id": 15,
+        "budget": 220.34,
+        "region": "华中"
+      },
+      {
+        "id": 17,
+        "name": "华北销售部-17",
+        "parent_id": 10,
+        "budget": 423.23,
+        "region": "华中"
+      },
+      {
+        "id": 18,
+        "name": "西南销售部-18",
+        "parent_id": 12,
+        "budget": 309.81,
+        "region": "西北"
+      },
+      {
+        "id": 19,
+        "name": "研发一部-19",
+        "parent_id": 3,
+        "budget": 70.62,
+        "region": "华南"
+      },
+      {
+        "id": 20,
+        "name": "研发二部-20",
+        "parent_id": 10,
+        "budget": 493.35,
+        "region": "东北"
+      },
+      {
+        "id": 21,
+        "name": "产品部-21",
+        "parent_id": 8,
+        "budget": 439.92,
+        "region": "西南"
+      },
+      {
+        "id": 22,
+        "name": "市场部-22",
+        "parent_id": 9,
+        "budget": 254.03,
+        "region": "东北"
+      },
+      {
+        "id": 23,
+        "name": "人力资源部-23",
+        "parent_id": 12,
+        "budget": 123.19,
+        "region": "华北"
+      },
+      {
+        "id": 24,
+        "name": "财务部-24",
+        "parent_id": 7,
+        "budget": 351.58,
+        "region": "西北"
+      },
+      {
+        "id": 25,
+        "name": "运营部-25",
+        "parent_id": 3,
+        "budget": 324.11,
+        "region": "华南"
+      },
+      {
+        "id": 26,
+        "name": "客服部-26",
+        "parent_id": 18,
+        "budget": 378.11,
+        "region": "华南"
+      },
+      {
+        "id": 27,
+        "name": "供应链部-27",
+        "parent_id": 15,
+        "budget": 220.75,
+        "region": "西北"
+      },
+      {
+        "id": 28,
+        "name": "法务部-28",
+        "parent_id": 18,
+        "budget": 148.83,
+        "region": "华北"
+      },
+      {
+        "id": 29,
+        "name": "华东销售部-29",
+        "parent_id": 2,
+        "budget": 153.07,
+        "region": "华东"
+      },
+      {
+        "id": 30,
+        "name": "华南销售部-30",
+        "parent_id": 11,
+        "budget": 230.52,
+        "region": "华东"
+      },
+      {
+        "id": 31,
+        "name": "华北销售部-31",
+        "parent_id": 7,
+        "budget": 460.91,
+        "region": "华中"
+      },
+      {
+        "id": 32,
+        "name": "西南销售部-32",
+        "parent_id": 11,
+        "budget": 145.68,
+        "region": "西南"
+      },
+      {
+        "id": 33,
+        "name": "研发一部-33",
+        "parent_id": 13,
+        "budget": 448.11,
+        "region": "西北"
+      },
+      {
+        "id": 34,
+        "name": "研发二部-34",
+        "parent_id": 15,
+        "budget": 114.29,
+        "region": "华南"
+      },
+      {
+        "id": 35,
+        "name": "产品部-35",
+        "parent_id": 8,
+        "budget": 385.25,
+        "region": "华中"
+      },
+      {
+        "id": 36,
+        "name": "市场部-36",
+        "parent_id": 9,
+        "budget": 386.16,
+        "region": "西南"
+      },
+      {
+        "id": 37,
+        "name": "人力资源部-37",
+        "parent_id": 19,
+        "budget": 229.73,
+        "region": "华南"
+      },
+      {
+        "id": 38,
+        "name": "财务部-38",
+        "parent_id": 5,
+        "budget": 279.29,
+        "region": "华东"
+      },
+      {
+        "id": 39,
+        "name": "运营部-39",
+        "parent_id": 2,
+        "budget": 437.5,
+        "region": "华南"
+      },
+      {
+        "id": 40,
+        "name": "客服部-40",
+        "parent_id": 6,
+        "budget": 406.44,
+        "region": "西南"
+      },
+      {
+        "id": 41,
+        "name": "供应链部-41",
+        "parent_id": 20,
+        "budget": 78.59,
+        "region": "西南"
+      },
+      {
+        "id": 42,
+        "name": "法务部-42",
+        "parent_id": 20,
+        "budget": 498.25,
+        "region": "华中"
+      },
+      {
+        "id": 43,
+        "name": "华东销售部-43",
+        "parent_id": 9,
+        "budget": 486.99,
+        "region": "东北"
+      },
+      {
+        "id": 44,
+        "name": "华南销售部-44",
+        "parent_id": 1,
+        "budget": 356.13,
+        "region": "华东"
+      },
+      {
+        "id": 45,
+        "name": "华北销售部-45",
+        "parent_id": 18,
+        "budget": 387.9,
+        "region": "东北"
+      },
+      {
+        "id": 46,
+        "name": "西南销售部-46",
+        "parent_id": 11,
+        "budget": 100.2,
+        "region": "西南"
+      },
+      {
+        "id": 47,
+        "name": "研发一部-47",
+        "parent_id": 6,
+        "budget": 254.18,
+        "region": "西北"
+      },
+      {
+        "id": 48,
+        "name": "研发二部-48",
+        "parent_id": 9,
+        "budget": 487.35,
+        "region": "东北"
+      },
+      {
+        "id": 49,
+        "name": "产品部-49",
+        "parent_id": 6,
+        "budget": 278.46,
+        "region": "华东"
+      },
+      {
+        "id": 50,
+        "name": "市场部-50",
+        "parent_id": 10,
+        "budget": 428.75,
+        "region": "华中"
+      },
+      {
+        "id": 51,
+        "name": "人力资源部-51",
+        "parent_id": 20,
+        "budget": 139.51,
+        "region": "华北"
+      },
+      {
+        "id": 52,
+        "name": "财务部-52",
+        "parent_id": 6,
+        "budget": 292.72,
+        "region": "东北"
+      },
+      {
+        "id": 53,
+        "name": "运营部-53",
+        "parent_id": 17,
+        "budget": 463.32,
+        "region": "华中"
+      },
+      {
+        "id": 54,
+        "name": "客服部-54",
+        "parent_id": 11,
+        "budget": 269.87,
+        "region": "华东"
+      },
+      {
+        "id": 55,
+        "name": "供应链部-55",
+        "parent_id": 12,
+        "budget": 445.42,
+        "region": "东北"
+      },
+      {
+        "id": 56,
+        "name": "法务部-56",
+        "parent_id": 10,
+        "budget": 157.75,
+        "region": "华南"
+      },
+      {
+        "id": 57,
+        "name": "华东销售部-57",
+        "parent_id": 19,
+        "budget": 476.13,
+        "region": "华东"
+      },
+      {
+        "id": 58,
+        "name": "华南销售部-58",
+        "parent_id": 16,
+        "budget": 417.21,
+        "region": "东北"
+      },
+      {
+        "id": 59,
+        "name": "华北销售部-59",
+        "parent_id": 18,
+        "budget": 394.63,
+        "region": "华南"
+      },
+      {
+        "id": 60,
+        "name": "西南销售部-60",
+        "parent_id": 16,
+        "budget": 476.08,
+        "region": "华南"
+      },
+      {
+        "id": 61,
+        "name": "研发一部-61",
+        "parent_id": 9,
+        "budget": 287.45,
+        "region": "华中"
+      },
+      {
+        "id": 62,
+        "name": "研发二部-62",
+        "parent_id": 14,
+        "budget": 483.96,
+        "region": "华中"
+      },
+      {
+        "id": 63,
+        "name": "产品部-63",
+        "parent_id": 7,
+        "budget": 370.83,
+        "region": "西南"
+      },
+      {
+        "id": 64,
+        "name": "市场部-64",
+        "parent_id": 12,
+        "budget": 247.15,
+        "region": "华中"
+      },
+      {
+        "id": 65,
+        "name": "人力资源部-65",
+        "parent_id": 15,
+        "budget": 104.45,
+        "region": "华南"
+      },
+      {
+        "id": 66,
+        "name": "财务部-66",
+        "parent_id": 3,
+        "budget": 202.14,
+        "region": "华中"
+      },
+      {
+        "id": 67,
+        "name": "运营部-67",
+        "parent_id": 18,
+        "budget": 153.55,
+        "region": "华南"
+      },
+      {
+        "id": 68,
+        "name": "客服部-68",
+        "parent_id": 1,
+        "budget": 81.95,
+        "region": "西北"
+      },
+      {
+        "id": 69,
+        "name": "供应链部-69",
+        "parent_id": 2,
+        "budget": 153.02,
+        "region": "华东"
+      },
+      {
+        "id": 70,
+        "name": "法务部-70",
+        "parent_id": 11,
+        "budget": 81.89,
+        "region": "华南"
+      },
+      {
+        "id": 71,
+        "name": "华东销售部-71",
+        "parent_id": 9,
+        "budget": 351.04,
+        "region": "华南"
+      },
+      {
+        "id": 72,
+        "name": "华南销售部-72",
+        "parent_id": 18,
+        "budget": 109.54,
+        "region": "华中"
+      },
+      {
+        "id": 73,
+        "name": "华北销售部-73",
+        "parent_id": 19,
+        "budget": 262.7,
+        "region": "东北"
+      },
+      {
+        "id": 74,
+        "name": "西南销售部-74",
+        "parent_id": 16,
+        "budget": 413.37,
+        "region": "华南"
+      },
+      {
+        "id": 75,
+        "name": "研发一部-75",
+        "parent_id": 4,
+        "budget": 93.62,
+        "region": "西南"
+      },
+      {
+        "id": 76,
+        "name": "研发二部-76",
+        "parent_id": 12,
+        "budget": 240.61,
+        "region": "西南"
+      },
+      {
+        "id": 77,
+        "name": "产品部-77",
+        "parent_id": 2,
+        "budget": 353.01,
+        "region": "西北"
+      },
+      {
+        "id": 78,
+        "name": "市场部-78",
+        "parent_id": 4,
+        "budget": 77.28,
+        "region": "西北"
+      },
+      {
+        "id": 79,
+        "name": "人力资源部-79",
+        "parent_id": 11,
+        "budget": 410.27,
+        "region": "华东"
+      },
+      {
+        "id": 80,
+        "name": "财务部-80",
+        "parent_id": 8,
+        "budget": 136.22,
+        "region": "华中"
+      },
+      {
+        "id": 81,
+        "name": "运营部-81",
+        "parent_id": 15,
+        "budget": 113.08,
+        "region": "华南"
+      },
+      {
+        "id": 82,
+        "name": "客服部-82",
+        "parent_id": 9,
+        "budget": 258.18,
+        "region": "东北"
+      },
+      {
+        "id": 83,
+        "name": "供应链部-83",
+        "parent_id": 3,
+        "budget": 249.41,
+        "region": "东北"
+      },
+      {
+        "id": 84,
+        "name": "法务部-84",
+        "parent_id": 18,
+        "budget": 94.06,
+        "region": "西北"
+      },
+      {
+        "id": 85,
+        "name": "华东销售部-85",
+        "parent_id": 18,
+        "budget": 426.21,
+        "region": "华东"
+      },
+      {
+        "id": 86,
+        "name": "华南销售部-86",
+        "parent_id": 8,
+        "budget": 124.84,
+        "region": "西南"
+      },
+      {
+        "id": 87,
+        "name": "华北销售部-87",
+        "parent_id": 16,
+        "budget": 146.19,
+        "region": "西南"
+      },
+      {
+        "id": 88,
+        "name": "西南销售部-88",
+        "parent_id": 2,
+        "budget": 124.09,
+        "region": "华东"
+      },
+      {
+        "id": 89,
+        "name": "研发一部-89",
+        "parent_id": 13,
+        "budget": 169.34,
+        "region": "东北"
+      },
+      {
+        "id": 90,
+        "name": "研发二部-90",
+        "parent_id": 15,
+        "budget": 178.36,
+        "region": "西北"
+      },
+      {
+        "id": 91,
+        "name": "产品部-91",
+        "parent_id": 18,
+        "budget": 347.84,
+        "region": "西南"
+      },
+      {
+        "id": 92,
+        "name": "市场部-92",
+        "parent_id": 5,
+        "budget": 135.45,
+        "region": "华南"
+      },
+      {
+        "id": 93,
+        "name": "人力资源部-93",
+        "parent_id": 2,
+        "budget": 310.63,
+        "region": "华中"
+      },
+      {
+        "id": 94,
+        "name": "财务部-94",
+        "parent_id": 2,
+        "budget": 386.59,
+        "region": "华东"
+      },
+      {
+        "id": 95,
+        "name": "运营部-95",
+        "parent_id": 2,
+        "budget": 312.88,
+        "region": "华中"
+      },
+      {
+        "id": 96,
+        "name": "客服部-96",
+        "parent_id": 17,
+        "budget": 120.84,
+        "region": "华中"
+      },
+      {
+        "id": 97,
+        "name": "供应链部-97",
+        "parent_id": 3,
+        "budget": 433.1,
+        "region": "华东"
+      },
+      {
+        "id": 98,
+        "name": "法务部-98",
+        "parent_id": 20,
+        "budget": 80.58,
+        "region": "东北"
+      },
+      {
+        "id": 99,
+        "name": "华东销售部-99",
+        "parent_id": 8,
+        "budget": 231.7,
+        "region": "华中"
+      },
+      {
+        "id": 100,
+        "name": "华南销售部-100",
+        "parent_id": 8,
+        "budget": 310.51,
+        "region": "华东"
+      },
+      {
+        "id": 101,
+        "name": "华北销售部-101",
+        "parent_id": 20,
+        "budget": 86.89,
+        "region": "西北"
+      },
+      {
+        "id": 102,
+        "name": "西南销售部-102",
+        "parent_id": 19,
+        "budget": 304.35,
+        "region": "华北"
+      },
+      {
+        "id": 103,
+        "name": "研发一部-103",
+        "parent_id": 9,
+        "budget": 141.92,
+        "region": "西北"
+      },
+      {
+        "id": 104,
+        "name": "研发二部-104",
+        "parent_id": 11,
+        "budget": 157.41,
+        "region": "西南"
+      },
+      {
+        "id": 105,
+        "name": "产品部-105",
+        "parent_id": 5,
+        "budget": 352.26,
+        "region": "华北"
+      }
+    ],
+    "employees": [
+      {
+        "id": 1,
+        "name": "员工1",
+        "dept_id": 59,
+        "job_title": "财务主管",
+        "salary": 42.37,
+        "hire_date": "2018-08-14"
+      },
+      {
+        "id": 2,
+        "name": "员工2",
+        "dept_id": 2,
+        "job_title": "运营专员",
+        "salary": 30.98,
+        "hire_date": "2022-10-16"
+      },
+      {
+        "id": 3,
+        "name": "员工3",
+        "dept_id": 13,
+        "job_title": "销售代表",
+        "salary": 27.89,
+        "hire_date": "2022-04-21"
+      },
+      {
+        "id": 4,
+        "name": "员工4",
+        "dept_id": 34,
+        "job_title": "研发工程师",
+        "salary": 42.53,
+        "hire_date": "2018-08-02"
+      },
+      {
+        "id": 5,
+        "name": "员工5",
+        "dept_id": 32,
+        "job_title": "财务主管",
+        "salary": 18.54,
+        "hire_date": "2021-09-23"
+      },
+      {
+        "id": 6,
+        "name": "员工6",
+        "dept_id": 70,
+        "job_title": "市场专员",
+        "salary": 30.63,
+        "hire_date": "2023-07-25"
+      },
+      {
+        "id": 7,
+        "name": "员工7",
+        "dept_id": 68,
+        "job_title": "销售经理",
+        "salary": 32.71,
+        "hire_date": "2022-09-20"
+      },
+      {
+        "id": 8,
+        "name": "员工8",
+        "dept_id": 39,
+        "job_title": "销售代表",
+        "salary": 42.74,
+        "hire_date": "2019-02-22"
+      },
+      {
+        "id": 9,
+        "name": "员工9",
+        "dept_id": 34,
+        "job_title": "销售代表",
+        "salary": 40.92,
+        "hire_date": "2024-04-25"
+      },
+      {
+        "id": 10,
+        "name": "员工10",
+        "dept_id": 71,
+        "job_title": "研发工程师",
+        "salary": 18.08,
+        "hire_date": "2023-02-23"
+      },
+      {
+        "id": 11,
+        "name": "员工11",
+        "dept_id": 27,
+        "job_title": "财务主管",
+        "salary": 15.53,
+        "hire_date": "2023-05-25"
+      },
+      {
+        "id": 12,
+        "name": "员工12",
+        "dept_id": 34,
+        "job_title": "客服主管",
+        "salary": 26.08,
+        "hire_date": "2018-06-07"
+      },
+      {
+        "id": 13,
+        "name": "员工13",
+        "dept_id": 12,
+        "job_title": "HR专员",
+        "salary": 38.69,
+        "hire_date": "2018-05-17"
+      },
+      {
+        "id": 14,
+        "name": "员工14",
+        "dept_id": 1,
+        "job_title": "财务主管",
+        "salary": 36.53,
+        "hire_date": "2023-06-03"
+      },
+      {
+        "id": 15,
+        "name": "员工15",
+        "dept_id": 34,
+        "job_title": "研发工程师",
+        "salary": 35.43,
+        "hire_date": "2022-09-11"
+      },
+      {
+        "id": 16,
+        "name": "员工16",
+        "dept_id": 91,
+        "job_title": "HR专员",
+        "salary": 28.75,
+        "hire_date": "2018-12-14"
+      },
+      {
+        "id": 17,
+        "name": "员工17",
+        "dept_id": 10,
+        "job_title": "研发工程师",
+        "salary": 28.19,
+        "hire_date": "2021-02-21"
+      },
+      {
+        "id": 18,
+        "name": "员工18",
+        "dept_id": 75,
+        "job_title": "客服主管",
+        "salary": 13.48,
+        "hire_date": "2019-01-31"
+      },
+      {
+        "id": 19,
+        "name": "员工19",
+        "dept_id": 6,
+        "job_title": "市场专员",
+        "salary": 21.49,
+        "hire_date": "2018-05-04"
+      },
+      {
+        "id": 20,
+        "name": "员工20",
+        "dept_id": 46,
+        "job_title": "产品经理",
+        "salary": 33.24,
+        "hire_date": "2023-09-04"
+      },
+      {
+        "id": 21,
+        "name": "员工21",
+        "dept_id": 14,
+        "job_title": "财务主管",
+        "salary": 36.86,
+        "hire_date": "2021-06-16"
+      },
+      {
+        "id": 22,
+        "name": "员工22",
+        "dept_id": 80,
+        "job_title": "研发工程师",
+        "salary": 42.25,
+        "hire_date": "2020-01-06"
+      },
+      {
+        "id": 23,
+        "name": "员工23",
+        "dept_id": 21,
+        "job_title": "研发工程师",
+        "salary": 40.61,
+        "hire_date": "2018-03-19"
+      },
+      {
+        "id": 24,
+        "name": "员工24",
+        "dept_id": 23,
+        "job_title": "财务主管",
+        "salary": 36.95,
+        "hire_date": "2021-07-03"
+      },
+      {
+        "id": 25,
+        "name": "员工25",
+        "dept_id": 103,
+        "job_title": "产品经理",
+        "salary": 17.87,
+        "hire_date": "2023-12-19"
+      },
+      {
+        "id": 26,
+        "name": "员工26",
+        "dept_id": 14,
+        "job_title": "HR专员",
+        "salary": 40.27,
+        "hire_date": "2022-01-02"
+      },
+      {
+        "id": 27,
+        "name": "员工27",
+        "dept_id": 29,
+        "job_title": "产品经理",
+        "salary": 38.21,
+        "hire_date": "2021-12-01"
+      },
+      {
+        "id": 28,
+        "name": "员工28",
+        "dept_id": 45,
+        "job_title": "市场专员",
+        "salary": 38.36,
+        "hire_date": "2019-12-09"
+      },
+      {
+        "id": 29,
+        "name": "员工29",
+        "dept_id": 29,
+        "job_title": "销售经理",
+        "salary": 32.42,
+        "hire_date": "2021-05-22"
+      },
+      {
+        "id": 30,
+        "name": "员工30",
+        "dept_id": 43,
+        "job_title": "市场专员",
+        "salary": 39.98,
+        "hire_date": "2020-05-17"
+      },
+      {
+        "id": 31,
+        "name": "员工31",
+        "dept_id": 45,
+        "job_title": "客服主管",
+        "salary": 22.79,
+        "hire_date": "2022-07-24"
+      },
+      {
+        "id": 32,
+        "name": "员工32",
+        "dept_id": 43,
+        "job_title": "销售经理",
+        "salary": 12.27,
+        "hire_date": "2020-03-22"
+      },
+      {
+        "id": 33,
+        "name": "员工33",
+        "dept_id": 23,
+        "job_title": "采购专员",
+        "salary": 43.61,
+        "hire_date": "2020-04-04"
+      },
+      {
+        "id": 34,
+        "name": "员工34",
+        "dept_id": 5,
+        "job_title": "销售代表",
+        "salary": 30.07,
+        "hire_date": "2020-12-10"
+      },
+      {
+        "id": 35,
+        "name": "员工35",
+        "dept_id": 94,
+        "job_title": "财务主管",
+        "salary": 24.15,
+        "hire_date": "2022-05-08"
+      },
+      {
+        "id": 36,
+        "name": "员工36",
+        "dept_id": 15,
+        "job_title": "HR专员",
+        "salary": 41.28,
+        "hire_date": "2019-08-14"
+      },
+      {
+        "id": 37,
+        "name": "员工37",
+        "dept_id": 33,
+        "job_title": "销售经理",
+        "salary": 34.23,
+        "hire_date": "2018-01-06"
+      },
+      {
+        "id": 38,
+        "name": "员工38",
+        "dept_id": 67,
+        "job_title": "客服主管",
+        "salary": 33.41,
+        "hire_date": "2024-04-24"
+      },
+      {
+        "id": 39,
+        "name": "员工39",
+        "dept_id": 95,
+        "job_title": "产品经理",
+        "salary": 21.48,
+        "hire_date": "2018-08-06"
+      },
+      {
+        "id": 40,
+        "name": "员工40",
+        "dept_id": 86,
+        "job_title": "财务主管",
+        "salary": 31.06,
+        "hire_date": "2023-08-24"
+      },
+      {
+        "id": 41,
+        "name": "员工41",
+        "dept_id": 16,
+        "job_title": "市场专员",
+        "salary": 26.76,
+        "hire_date": "2023-09-03"
+      },
+      {
+        "id": 42,
+        "name": "员工42",
+        "dept_id": 53,
+        "job_title": "财务主管",
+        "salary": 22.89,
+        "hire_date": "2020-07-07"
+      },
+      {
+        "id": 43,
+        "name": "员工43",
+        "dept_id": 71,
+        "job_title": "研发工程师",
+        "salary": 15.1,
+        "hire_date": "2023-08-28"
+      },
+      {
+        "id": 44,
+        "name": "员工44",
+        "dept_id": 49,
+        "job_title": "研发工程师",
+        "salary": 30.77,
+        "hire_date": "2020-07-24"
+      },
+      {
+        "id": 45,
+        "name": "员工45",
+        "dept_id": 52,
+        "job_title": "客服主管",
+        "salary": 38.85,
+        "hire_date": "2020-08-02"
+      },
+      {
+        "id": 46,
+        "name": "员工46",
+        "dept_id": 37,
+        "job_title": "产品经理",
+        "salary": 23.91,
+        "hire_date": "2022-12-07"
+      },
+      {
+        "id": 47,
+        "name": "员工47",
+        "dept_id": 78,
+        "job_title": "财务主管",
+        "salary": 25.2,
+        "hire_date": "2021-10-05"
+      },
+      {
+        "id": 48,
+        "name": "员工48",
+        "dept_id": 87,
+        "job_title": "产品经理",
+        "salary": 26.91,
+        "hire_date": "2024-04-05"
+      },
+      {
+        "id": 49,
+        "name": "员工49",
+        "dept_id": 22,
+        "job_title": "销售代表",
+        "salary": 18.5,
+        "hire_date": "2023-08-25"
+      },
+      {
+        "id": 50,
+        "name": "员工50",
+        "dept_id": 82,
+        "job_title": "采购专员",
+        "salary": 20.4,
+        "hire_date": "2024-05-22"
+      },
+      {
+        "id": 51,
+        "name": "员工51",
+        "dept_id": 31,
+        "job_title": "市场专员",
+        "salary": 16.31,
+        "hire_date": "2019-09-11"
+      },
+      {
+        "id": 52,
+        "name": "员工52",
+        "dept_id": 19,
+        "job_title": "销售经理",
+        "salary": 9.71,
+        "hire_date": "2022-01-16"
+      },
+      {
+        "id": 53,
+        "name": "员工53",
+        "dept_id": 79,
+        "job_title": "销售代表",
+        "salary": 24.85,
+        "hire_date": "2023-05-11"
+      },
+      {
+        "id": 54,
+        "name": "员工54",
+        "dept_id": 74,
+        "job_title": "产品经理",
+        "salary": 34.58,
+        "hire_date": "2021-04-07"
+      },
+      {
+        "id": 55,
+        "name": "员工55",
+        "dept_id": 64,
+        "job_title": "HR专员",
+        "salary": 17.03,
+        "hire_date": "2023-08-01"
+      },
+      {
+        "id": 56,
+        "name": "员工56",
+        "dept_id": 89,
+        "job_title": "销售经理",
+        "salary": 41.03,
+        "hire_date": "2018-11-28"
+      },
+      {
+        "id": 57,
+        "name": "员工57",
+        "dept_id": 100,
+        "job_title": "HR专员",
+        "salary": 16.1,
+        "hire_date": "2023-12-03"
+      },
+      {
+        "id": 58,
+        "name": "员工58",
+        "dept_id": 67,
+        "job_title": "运营专员",
+        "salary": 9.86,
+        "hire_date": "2020-02-14"
+      },
+      {
+        "id": 59,
+        "name": "员工59",
+        "dept_id": 16,
+        "job_title": "运营专员",
+        "salary": 12.93,
+        "hire_date": "2021-12-14"
+      },
+      {
+        "id": 60,
+        "name": "员工60",
+        "dept_id": 86,
+        "job_title": "客服主管",
+        "salary": 44.55,
+        "hire_date": "2023-01-25"
+      },
+      {
+        "id": 61,
+        "name": "员工61",
+        "dept_id": 41,
+        "job_title": "运营专员",
+        "salary": 30.67,
+        "hire_date": "2024-02-13"
+      },
+      {
+        "id": 62,
+        "name": "员工62",
+        "dept_id": 65,
+        "job_title": "HR专员",
+        "salary": 38.73,
+        "hire_date": "2022-08-30"
+      },
+      {
+        "id": 63,
+        "name": "员工63",
+        "dept_id": 58,
+        "job_title": "研发工程师",
+        "salary": 35.52,
+        "hire_date": "2022-01-14"
+      },
+      {
+        "id": 64,
+        "name": "员工64",
+        "dept_id": 58,
+        "job_title": "市场专员",
+        "salary": 35.82,
+        "hire_date": "2023-06-05"
+      },
+      {
+        "id": 65,
+        "name": "员工65",
+        "dept_id": 36,
+        "job_title": "客服主管",
+        "salary": 25.93,
+        "hire_date": "2020-01-14"
+      },
+      {
+        "id": 66,
+        "name": "员工66",
+        "dept_id": 36,
+        "job_title": "运营专员",
+        "salary": 10.87,
+        "hire_date": "2020-06-06"
+      },
+      {
+        "id": 67,
+        "name": "员工67",
+        "dept_id": 31,
+        "job_title": "市场专员",
+        "salary": 20.43,
+        "hire_date": "2022-08-06"
+      },
+      {
+        "id": 68,
+        "name": "员工68",
+        "dept_id": 11,
+        "job_title": "研发工程师",
+        "salary": 13.58,
+        "hire_date": "2021-04-05"
+      },
+      {
+        "id": 69,
+        "name": "员工69",
+        "dept_id": 89,
+        "job_title": "研发工程师",
+        "salary": 34.14,
+        "hire_date": "2018-07-19"
+      },
+      {
+        "id": 70,
+        "name": "员工70",
+        "dept_id": 54,
+        "job_title": "HR专员",
+        "salary": 20.24,
+        "hire_date": "2021-12-18"
+      },
+      {
+        "id": 71,
+        "name": "员工71",
+        "dept_id": 54,
+        "job_title": "销售经理",
+        "salary": 15.65,
+        "hire_date": "2021-07-29"
+      },
+      {
+        "id": 72,
+        "name": "员工72",
+        "dept_id": 50,
+        "job_title": "采购专员",
+        "salary": 43.0,
+        "hire_date": "2018-03-02"
+      },
+      {
+        "id": 73,
+        "name": "员工73",
+        "dept_id": 98,
+        "job_title": "采购专员",
+        "salary": 22.07,
+        "hire_date": "2018-01-19"
+      },
+      {
+        "id": 74,
+        "name": "员工74",
+        "dept_id": 46,
+        "job_title": "市场专员",
+        "salary": 35.88,
+        "hire_date": "2021-07-25"
+      },
+      {
+        "id": 75,
+        "name": "员工75",
+        "dept_id": 69,
+        "job_title": "客服主管",
+        "salary": 37.6,
+        "hire_date": "2019-11-17"
+      },
+      {
+        "id": 76,
+        "name": "员工76",
+        "dept_id": 63,
+        "job_title": "产品经理",
+        "salary": 18.1,
+        "hire_date": "2022-02-17"
+      },
+      {
+        "id": 77,
+        "name": "员工77",
+        "dept_id": 4,
+        "job_title": "HR专员",
+        "salary": 20.44,
+        "hire_date": "2023-10-12"
+      },
+      {
+        "id": 78,
+        "name": "员工78",
+        "dept_id": 103,
+        "job_title": "HR专员",
+        "salary": 34.79,
+        "hire_date": "2021-12-23"
+      },
+      {
+        "id": 79,
+        "name": "员工79",
+        "dept_id": 17,
+        "job_title": "采购专员",
+        "salary": 27.76,
+        "hire_date": "2021-05-09"
+      },
+      {
+        "id": 80,
+        "name": "员工80",
+        "dept_id": 76,
+        "job_title": "采购专员",
+        "salary": 32.53,
+        "hire_date": "2018-09-18"
+      },
+      {
+        "id": 81,
+        "name": "员工81",
+        "dept_id": 83,
+        "job_title": "HR专员",
+        "salary": 13.02,
+        "hire_date": "2021-12-05"
+      },
+      {
+        "id": 82,
+        "name": "员工82",
+        "dept_id": 24,
+        "job_title": "销售经理",
+        "salary": 17.63,
+        "hire_date": "2020-10-14"
+      },
+      {
+        "id": 83,
+        "name": "员工83",
+        "dept_id": 28,
+        "job_title": "运营专员",
+        "salary": 20.09,
+        "hire_date": "2021-03-23"
+      },
+      {
+        "id": 84,
+        "name": "员工84",
+        "dept_id": 36,
+        "job_title": "HR专员",
+        "salary": 17.33,
+        "hire_date": "2018-09-12"
+      },
+      {
+        "id": 85,
+        "name": "员工85",
+        "dept_id": 61,
+        "job_title": "销售经理",
+        "salary": 35.71,
+        "hire_date": "2018-06-11"
+      },
+      {
+        "id": 86,
+        "name": "员工86",
+        "dept_id": 45,
+        "job_title": "产品经理",
+        "salary": 32.06,
+        "hire_date": "2023-07-18"
+      },
+      {
+        "id": 87,
+        "name": "员工87",
+        "dept_id": 6,
+        "job_title": "销售经理",
+        "salary": 43.14,
+        "hire_date": "2019-09-12"
+      },
+      {
+        "id": 88,
+        "name": "员工88",
+        "dept_id": 3,
+        "job_title": "采购专员",
+        "salary": 13.64,
+        "hire_date": "2019-01-28"
+      },
+      {
+        "id": 89,
+        "name": "员工89",
+        "dept_id": 61,
+        "job_title": "销售代表",
+        "salary": 28.87,
+        "hire_date": "2019-11-09"
+      },
+      {
+        "id": 90,
+        "name": "员工90",
+        "dept_id": 60,
+        "job_title": "市场专员",
+        "salary": 36.38,
+        "hire_date": "2019-06-06"
+      },
+      {
+        "id": 91,
+        "name": "员工91",
+        "dept_id": 78,
+        "job_title": "采购专员",
+        "salary": 43.66,
+        "hire_date": "2024-02-10"
+      },
+      {
+        "id": 92,
+        "name": "员工92",
+        "dept_id": 15,
+        "job_title": "研发工程师",
+        "salary": 43.69,
+        "hire_date": "2018-12-02"
+      },
+      {
+        "id": 93,
+        "name": "员工93",
+        "dept_id": 75,
+        "job_title": "销售经理",
+        "salary": 42.37,
+        "hire_date": "2022-11-24"
+      },
+      {
+        "id": 94,
+        "name": "员工94",
+        "dept_id": 87,
+        "job_title": "HR专员",
+        "salary": 22.68,
+        "hire_date": "2024-01-31"
+      },
+      {
+        "id": 95,
+        "name": "员工95",
+        "dept_id": 26,
+        "job_title": "销售代表",
+        "salary": 29.91,
+        "hire_date": "2023-05-03"
+      },
+      {
+        "id": 96,
+        "name": "员工96",
+        "dept_id": 32,
+        "job_title": "销售代表",
+        "salary": 33.8,
+        "hire_date": "2020-07-25"
+      },
+      {
+        "id": 97,
+        "name": "员工97",
+        "dept_id": 88,
+        "job_title": "采购专员",
+        "salary": 37.8,
+        "hire_date": "2022-10-25"
+      },
+      {
+        "id": 98,
+        "name": "员工98",
+        "dept_id": 101,
+        "job_title": "销售经理",
+        "salary": 20.85,
+        "hire_date": "2021-08-23"
+      },
+      {
+        "id": 99,
+        "name": "员工99",
+        "dept_id": 85,
+        "job_title": "财务主管",
+        "salary": 10.55,
+        "hire_date": "2023-07-05"
+      },
+      {
+        "id": 100,
+        "name": "员工100",
+        "dept_id": 44,
+        "job_title": "销售经理",
+        "salary": 39.43,
+        "hire_date": "2022-03-04"
+      },
+      {
+        "id": 101,
+        "name": "员工101",
+        "dept_id": 14,
+        "job_title": "HR专员",
+        "salary": 43.55,
+        "hire_date": "2023-05-29"
+      },
+      {
+        "id": 102,
+        "name": "员工102",
+        "dept_id": 59,
+        "job_title": "研发工程师",
+        "salary": 24.11,
+        "hire_date": "2024-03-29"
+      },
+      {
+        "id": 103,
+        "name": "员工103",
+        "dept_id": 67,
+        "job_title": "市场专员",
+        "salary": 30.79,
+        "hire_date": "2022-07-31"
+      },
+      {
+        "id": 104,
+        "name": "员工104",
+        "dept_id": 100,
+        "job_title": "运营专员",
+        "salary": 25.2,
+        "hire_date": "2024-03-21"
+      },
+      {
+        "id": 105,
+        "name": "员工105",
+        "dept_id": 76,
+        "job_title": "市场专员",
+        "salary": 19.93,
+        "hire_date": "2020-02-02"
+      }
+    ],
+    "projects": [
+      {
+        "id": 1,
+        "name": "客户平台1",
+        "dept_id": 58,
+        "manager_id": 32,
+        "budget": 155.09,
+        "start_date": "2022-08-05",
+        "end_date": "2025-11-15",
+        "status": "规划中"
+      },
+      {
+        "id": 2,
+        "name": "移动端2",
+        "dept_id": 42,
+        "manager_id": 24,
+        "budget": 107.76,
+        "start_date": "2022-01-23",
+        "end_date": "2025-01-18",
+        "status": "暂停"
+      },
+      {
+        "id": 3,
+        "name": "安全加固3",
+        "dept_id": 77,
+        "manager_id": 90,
+        "budget": 178.42,
+        "start_date": "2022-09-22",
+        "end_date": "2024-08-05",
+        "status": "进行中"
+      },
+      {
+        "id": 4,
+        "name": "数据分析4",
+        "dept_id": 93,
+        "manager_id": 53,
+        "budget": 107.94,
+        "start_date": "2022-03-08",
+        "end_date": "2024-07-06",
+        "status": "已验收"
+      },
+      {
+        "id": 5,
+        "name": "营销自动化5",
+        "dept_id": 63,
+        "manager_id": 58,
+        "budget": 162.73,
+        "start_date": "2023-05-17",
+        "end_date": "2025-07-06",
+        "status": "进行中"
+      },
+      {
+        "id": 6,
+        "name": "安全加固6",
+        "dept_id": 89,
+        "manager_id": 32,
+        "budget": 75.12,
+        "start_date": "2022-06-22",
+        "end_date": "2024-11-10",
+        "status": "暂停"
+      },
+      {
+        "id": 7,
+        "name": "营销自动化7",
+        "dept_id": 45,
+        "manager_id": 55,
+        "budget": 199.39,
+        "start_date": "2023-03-06",
+        "end_date": "2025-02-16",
+        "status": "暂停"
+      },
+      {
+        "id": 8,
+        "name": "移动端8",
+        "dept_id": 35,
+        "manager_id": 40,
+        "budget": 65.25,
+        "start_date": "2023-06-30",
+        "end_date": "2024-12-18",
+        "status": "进行中"
+      },
+      {
+        "id": 9,
+        "name": "数据分析9",
+        "dept_id": 96,
+        "manager_id": 69,
+        "budget": 191.16,
+        "start_date": "2022-09-03",
+        "end_date": "2024-04-02",
+        "status": "已验收"
+      },
+      {
+        "id": 10,
+        "name": "数据分析10",
+        "dept_id": 62,
+        "manager_id": 36,
+        "budget": 150.43,
+        "start_date": "2022-06-18",
+        "end_date": "2025-07-27",
+        "status": "暂停"
+      },
+      {
+        "id": 11,
+        "name": "客户平台11",
+        "dept_id": 38,
+        "manager_id": 30,
+        "budget": 84.96,
+        "start_date": "2023-10-09",
+        "end_date": "2024-05-30",
+        "status": "暂停"
+      },
+      {
+        "id": 12,
+        "name": "数字化转型12",
+        "dept_id": 17,
+        "manager_id": 36,
+        "budget": 28.19,
+        "start_date": "2023-07-04",
+        "end_date": "2025-02-18",
+        "status": "进行中"
+      },
+      {
+        "id": 13,
+        "name": "安全加固13",
+        "dept_id": 82,
+        "manager_id": 97,
+        "budget": 108.36,
+        "start_date": "2023-06-26",
+        "end_date": "2024-04-08",
+        "status": "进行中"
+      },
+      {
+        "id": 14,
+        "name": "安全加固14",
+        "dept_id": 57,
+        "manager_id": 44,
+        "budget": 53.19,
+        "start_date": "2022-12-31",
+        "end_date": "2025-01-06",
+        "status": "进行中"
+      },
+      {
+        "id": 15,
+        "name": "安全加固15",
+        "dept_id": 15,
+        "manager_id": 9,
+        "budget": 92.13,
+        "start_date": "2023-11-01",
+        "end_date": "2025-01-06",
+        "status": "进行中"
+      },
+      {
+        "id": 16,
+        "name": "数字化转型16",
+        "dept_id": 104,
+        "manager_id": 73,
+        "budget": 190.84,
+        "start_date": "2022-04-28",
+        "end_date": "2024-04-25",
+        "status": "进行中"
+      },
+      {
+        "id": 17,
+        "name": "数据分析17",
+        "dept_id": 98,
+        "manager_id": 54,
+        "budget": 129.14,
+        "start_date": "2022-04-03",
+        "end_date": "2025-03-09",
+        "status": "已验收"
+      },
+      {
+        "id": 18,
+        "name": "API网关18",
+        "dept_id": 57,
+        "manager_id": 39,
+        "budget": 174.83,
+        "start_date": "2022-12-16",
+        "end_date": "2025-12-06",
+        "status": "规划中"
+      },
+      {
+        "id": 19,
+        "name": "安全加固19",
+        "dept_id": 8,
+        "manager_id": 79,
+        "budget": 192.82,
+        "start_date": "2023-03-18",
+        "end_date": "2025-04-27",
+        "status": "进行中"
+      },
+      {
+        "id": 20,
+        "name": "数据分析20",
+        "dept_id": 34,
+        "manager_id": 85,
+        "budget": 34.61,
+        "start_date": "2023-05-01",
+        "end_date": "2024-06-12",
+        "status": "已验收"
+      },
+      {
+        "id": 21,
+        "name": "供应链优化21",
+        "dept_id": 21,
+        "manager_id": 1,
+        "budget": 93.53,
+        "start_date": "2023-03-05",
+        "end_date": "2024-02-28",
+        "status": "规划中"
+      },
+      {
+        "id": 22,
+        "name": "安全加固22",
+        "dept_id": 37,
+        "manager_id": 91,
+        "budget": 70.89,
+        "start_date": "2022-01-26",
+        "end_date": "2024-06-28",
+        "status": "规划中"
+      },
+      {
+        "id": 23,
+        "name": "客户平台23",
+        "dept_id": 34,
+        "manager_id": 101,
+        "budget": 162.42,
+        "start_date": "2023-06-18",
+        "end_date": "2024-06-30",
+        "status": "已验收"
+      },
+      {
+        "id": 24,
+        "name": "API网关24",
+        "dept_id": 29,
+        "manager_id": 83,
+        "budget": 46.82,
+        "start_date": "2022-03-31",
+        "end_date": "2025-02-26",
+        "status": "暂停"
+      },
+      {
+        "id": 25,
+        "name": "供应链优化25",
+        "dept_id": 22,
+        "manager_id": 102,
+        "budget": 75.37,
+        "start_date": "2022-02-25",
+        "end_date": "2024-02-16",
+        "status": "暂停"
+      },
+      {
+        "id": 26,
+        "name": "营销自动化26",
+        "dept_id": 89,
+        "manager_id": 39,
+        "budget": 145.95,
+        "start_date": "2022-04-07",
+        "end_date": "2024-12-30",
+        "status": "暂停"
+      },
+      {
+        "id": 27,
+        "name": "营销自动化27",
+        "dept_id": 77,
+        "manager_id": 6,
+        "budget": 180.1,
+        "start_date": "2022-12-07",
+        "end_date": "2024-03-03",
+        "status": "暂停"
+      },
+      {
+        "id": 28,
+        "name": "安全加固28",
+        "dept_id": 30,
+        "manager_id": 87,
+        "budget": 170.47,
+        "start_date": "2022-01-21",
+        "end_date": "2024-03-11",
+        "status": "进行中"
+      },
+      {
+        "id": 29,
+        "name": "安全加固29",
+        "dept_id": 98,
+        "manager_id": 97,
+        "budget": 51.53,
+        "start_date": "2023-03-24",
+        "end_date": "2024-02-01",
+        "status": "规划中"
+      },
+      {
+        "id": 30,
+        "name": "安全加固30",
+        "dept_id": 56,
+        "manager_id": 82,
+        "budget": 166.56,
+        "start_date": "2022-05-21",
+        "end_date": "2025-03-30",
+        "status": "进行中"
+      },
+      {
+        "id": 31,
+        "name": "营销自动化31",
+        "dept_id": 43,
+        "manager_id": 42,
+        "budget": 140.62,
+        "start_date": "2022-09-28",
+        "end_date": "2024-11-13",
+        "status": "已验收"
+      },
+      {
+        "id": 32,
+        "name": "移动端32",
+        "dept_id": 64,
+        "manager_id": 37,
+        "budget": 139.27,
+        "start_date": "2022-11-16",
+        "end_date": "2025-06-22",
+        "status": "规划中"
+      },
+      {
+        "id": 33,
+        "name": "数字化转型33",
+        "dept_id": 41,
+        "manager_id": 33,
+        "budget": 78.19,
+        "start_date": "2022-12-20",
+        "end_date": "2024-03-09",
+        "status": "规划中"
+      },
+      {
+        "id": 34,
+        "name": "数字化转型34",
+        "dept_id": 70,
+        "manager_id": 60,
+        "budget": 94.38,
+        "start_date": "2023-05-26",
+        "end_date": "2025-11-06",
+        "status": "已验收"
+      },
+      {
+        "id": 35,
+        "name": "移动端35",
+        "dept_id": 64,
+        "manager_id": 81,
+        "budget": 99.57,
+        "start_date": "2023-04-29",
+        "end_date": "2025-08-10",
+        "status": "进行中"
+      },
+      {
+        "id": 36,
+        "name": "数据分析36",
+        "dept_id": 17,
+        "manager_id": 37,
+        "budget": 98.86,
+        "start_date": "2022-07-27",
+        "end_date": "2025-03-02",
+        "status": "规划中"
+      },
+      {
+        "id": 37,
+        "name": "客户平台37",
+        "dept_id": 78,
+        "manager_id": 103,
+        "budget": 63.07,
+        "start_date": "2022-01-23",
+        "end_date": "2025-05-04",
+        "status": "已验收"
+      },
+      {
+        "id": 38,
+        "name": "安全加固38",
+        "dept_id": 71,
+        "manager_id": 53,
+        "budget": 36.78,
+        "start_date": "2023-03-04",
+        "end_date": "2024-01-11",
+        "status": "进行中"
+      },
+      {
+        "id": 39,
+        "name": "营销自动化39",
+        "dept_id": 20,
+        "manager_id": 64,
+        "budget": 187.88,
+        "start_date": "2022-04-02",
+        "end_date": "2025-05-18",
+        "status": "暂停"
+      },
+      {
+        "id": 40,
+        "name": "安全加固40",
+        "dept_id": 62,
+        "manager_id": 61,
+        "budget": 63.87,
+        "start_date": "2022-11-19",
+        "end_date": "2025-10-10",
+        "status": "已验收"
+      },
+      {
+        "id": 41,
+        "name": "API网关41",
+        "dept_id": 77,
+        "manager_id": 66,
+        "budget": 154.33,
+        "start_date": "2022-05-29",
+        "end_date": "2025-12-17",
+        "status": "已验收"
+      },
+      {
+        "id": 42,
+        "name": "客户平台42",
+        "dept_id": 102,
+        "manager_id": 54,
+        "budget": 81.18,
+        "start_date": "2022-08-03",
+        "end_date": "2025-08-23",
+        "status": "暂停"
+      },
+      {
+        "id": 43,
+        "name": "数字化转型43",
+        "dept_id": 39,
+        "manager_id": 76,
+        "budget": 124.39,
+        "start_date": "2022-08-08",
+        "end_date": "2025-07-17",
+        "status": "规划中"
+      },
+      {
+        "id": 44,
+        "name": "供应链优化44",
+        "dept_id": 62,
+        "manager_id": 45,
+        "budget": 79.84,
+        "start_date": "2022-12-13",
+        "end_date": "2025-02-22",
+        "status": "规划中"
+      },
+      {
+        "id": 45,
+        "name": "营销自动化45",
+        "dept_id": 25,
+        "manager_id": 90,
+        "budget": 62.98,
+        "start_date": "2023-12-26",
+        "end_date": "2024-09-06",
+        "status": "规划中"
+      },
+      {
+        "id": 46,
+        "name": "数据分析46",
+        "dept_id": 53,
+        "manager_id": 6,
+        "budget": 77.27,
+        "start_date": "2023-10-27",
+        "end_date": "2025-08-25",
+        "status": "规划中"
+      },
+      {
+        "id": 47,
+        "name": "API网关47",
+        "dept_id": 102,
+        "manager_id": 84,
+        "budget": 196.55,
+        "start_date": "2022-10-27",
+        "end_date": "2025-05-30",
+        "status": "规划中"
+      },
+      {
+        "id": 48,
+        "name": "数字化转型48",
+        "dept_id": 76,
+        "manager_id": 43,
+        "budget": 176.55,
+        "start_date": "2022-04-09",
+        "end_date": "2025-01-25",
+        "status": "规划中"
+      },
+      {
+        "id": 49,
+        "name": "客户平台49",
+        "dept_id": 59,
+        "manager_id": 2,
+        "budget": 150.04,
+        "start_date": "2023-02-13",
+        "end_date": "2025-12-08",
+        "status": "规划中"
+      },
+      {
+        "id": 50,
+        "name": "供应链优化50",
+        "dept_id": 101,
+        "manager_id": 34,
+        "budget": 80.94,
+        "start_date": "2022-02-28",
+        "end_date": "2024-12-30",
+        "status": "规划中"
+      },
+      {
+        "id": 51,
+        "name": "客户平台51",
+        "dept_id": 87,
+        "manager_id": 69,
+        "budget": 88.4,
+        "start_date": "2023-10-24",
+        "end_date": "2024-09-12",
+        "status": "暂停"
+      },
+      {
+        "id": 52,
+        "name": "营销自动化52",
+        "dept_id": 5,
+        "manager_id": 80,
+        "budget": 32.32,
+        "start_date": "2023-11-09",
+        "end_date": "2025-02-24",
+        "status": "暂停"
+      },
+      {
+        "id": 53,
+        "name": "数据分析53",
+        "dept_id": 56,
+        "manager_id": 13,
+        "budget": 156.87,
+        "start_date": "2023-08-04",
+        "end_date": "2024-03-11",
+        "status": "进行中"
+      },
+      {
+        "id": 54,
+        "name": "营销自动化54",
+        "dept_id": 39,
+        "manager_id": 4,
+        "budget": 28.28,
+        "start_date": "2022-05-10",
+        "end_date": "2025-06-23",
+        "status": "进行中"
+      },
+      {
+        "id": 55,
+        "name": "安全加固55",
+        "dept_id": 56,
+        "manager_id": 19,
+        "budget": 63.96,
+        "start_date": "2022-10-06",
+        "end_date": "2024-10-18",
+        "status": "规划中"
+      },
+      {
+        "id": 56,
+        "name": "供应链优化56",
+        "dept_id": 11,
+        "manager_id": 79,
+        "budget": 176.75,
+        "start_date": "2022-05-13",
+        "end_date": "2024-05-15",
+        "status": "已验收"
+      },
+      {
+        "id": 57,
+        "name": "营销自动化57",
+        "dept_id": 19,
+        "manager_id": 30,
+        "budget": 103.01,
+        "start_date": "2023-12-11",
+        "end_date": "2025-03-28",
+        "status": "暂停"
+      },
+      {
+        "id": 58,
+        "name": "营销自动化58",
+        "dept_id": 2,
+        "manager_id": 103,
+        "budget": 103.75,
+        "start_date": "2022-07-18",
+        "end_date": "2025-06-01",
+        "status": "暂停"
+      },
+      {
+        "id": 59,
+        "name": "供应链优化59",
+        "dept_id": 45,
+        "manager_id": 76,
+        "budget": 73.85,
+        "start_date": "2022-02-27",
+        "end_date": "2024-12-09",
+        "status": "规划中"
+      },
+      {
+        "id": 60,
+        "name": "安全加固60",
+        "dept_id": 39,
+        "manager_id": 26,
+        "budget": 199.89,
+        "start_date": "2022-12-21",
+        "end_date": "2025-10-18",
+        "status": "规划中"
+      },
+      {
+        "id": 61,
+        "name": "客户平台61",
+        "dept_id": 74,
+        "manager_id": 46,
+        "budget": 123.47,
+        "start_date": "2022-07-04",
+        "end_date": "2024-10-23",
+        "status": "暂停"
+      },
+      {
+        "id": 62,
+        "name": "数字化转型62",
+        "dept_id": 51,
+        "manager_id": 36,
+        "budget": 21.46,
+        "start_date": "2023-10-07",
+        "end_date": "2025-05-26",
+        "status": "进行中"
+      },
+      {
+        "id": 63,
+        "name": "营销自动化63",
+        "dept_id": 37,
+        "manager_id": 100,
+        "budget": 163.79,
+        "start_date": "2023-10-09",
+        "end_date": "2025-12-03",
+        "status": "暂停"
+      },
+      {
+        "id": 64,
+        "name": "数据分析64",
+        "dept_id": 80,
+        "manager_id": 33,
+        "budget": 142.0,
+        "start_date": "2023-05-10",
+        "end_date": "2024-05-27",
+        "status": "已验收"
+      },
+      {
+        "id": 65,
+        "name": "客户平台65",
+        "dept_id": 83,
+        "manager_id": 6,
+        "budget": 75.61,
+        "start_date": "2023-12-03",
+        "end_date": "2025-05-02",
+        "status": "规划中"
+      },
+      {
+        "id": 66,
+        "name": "数字化转型66",
+        "dept_id": 94,
+        "manager_id": 17,
+        "budget": 36.22,
+        "start_date": "2023-03-27",
+        "end_date": "2024-10-10",
+        "status": "暂停"
+      },
+      {
+        "id": 67,
+        "name": "移动端67",
+        "dept_id": 23,
+        "manager_id": 26,
+        "budget": 43.79,
+        "start_date": "2023-08-04",
+        "end_date": "2024-11-18",
+        "status": "暂停"
+      },
+      {
+        "id": 68,
+        "name": "安全加固68",
+        "dept_id": 33,
+        "manager_id": 62,
+        "budget": 194.13,
+        "start_date": "2023-10-08",
+        "end_date": "2024-05-07",
+        "status": "暂停"
+      },
+      {
+        "id": 69,
+        "name": "移动端69",
+        "dept_id": 60,
+        "manager_id": 10,
+        "budget": 45.34,
+        "start_date": "2023-09-17",
+        "end_date": "2024-03-30",
+        "status": "已验收"
+      },
+      {
+        "id": 70,
+        "name": "API网关70",
+        "dept_id": 72,
+        "manager_id": 47,
+        "budget": 36.25,
+        "start_date": "2023-10-19",
+        "end_date": "2025-09-16",
+        "status": "规划中"
+      },
+      {
+        "id": 71,
+        "name": "数字化转型71",
+        "dept_id": 16,
+        "manager_id": 59,
+        "budget": 86.35,
+        "start_date": "2022-07-25",
+        "end_date": "2025-02-20",
+        "status": "暂停"
+      },
+      {
+        "id": 72,
+        "name": "API网关72",
+        "dept_id": 48,
+        "manager_id": 14,
+        "budget": 141.47,
+        "start_date": "2023-10-01",
+        "end_date": "2025-05-10",
+        "status": "规划中"
+      },
+      {
+        "id": 73,
+        "name": "数字化转型73",
+        "dept_id": 72,
+        "manager_id": 42,
+        "budget": 184.75,
+        "start_date": "2023-04-27",
+        "end_date": "2025-11-17",
+        "status": "已验收"
+      },
+      {
+        "id": 74,
+        "name": "客户平台74",
+        "dept_id": 60,
+        "manager_id": 90,
+        "budget": 74.39,
+        "start_date": "2023-05-09",
+        "end_date": "2025-10-01",
+        "status": "规划中"
+      },
+      {
+        "id": 75,
+        "name": "客户平台75",
+        "dept_id": 5,
+        "manager_id": 39,
+        "budget": 199.27,
+        "start_date": "2022-04-19",
+        "end_date": "2024-02-05",
+        "status": "进行中"
+      },
+      {
+        "id": 76,
+        "name": "客户平台76",
+        "dept_id": 69,
+        "manager_id": 18,
+        "budget": 89.96,
+        "start_date": "2022-07-02",
+        "end_date": "2025-11-20",
+        "status": "暂停"
+      },
+      {
+        "id": 77,
+        "name": "API网关77",
+        "dept_id": 94,
+        "manager_id": 20,
+        "budget": 179.37,
+        "start_date": "2023-04-02",
+        "end_date": "2025-07-30",
+        "status": "进行中"
+      },
+      {
+        "id": 78,
+        "name": "营销自动化78",
+        "dept_id": 36,
+        "manager_id": 5,
+        "budget": 144.25,
+        "start_date": "2023-04-24",
+        "end_date": "2024-11-12",
+        "status": "已验收"
+      },
+      {
+        "id": 79,
+        "name": "营销自动化79",
+        "dept_id": 47,
+        "manager_id": 13,
+        "budget": 196.57,
+        "start_date": "2022-12-12",
+        "end_date": "2024-07-02",
+        "status": "暂停"
+      },
+      {
+        "id": 80,
+        "name": "移动端80",
+        "dept_id": 36,
+        "manager_id": 25,
+        "budget": 194.28,
+        "start_date": "2022-02-17",
+        "end_date": "2024-11-05",
+        "status": "规划中"
+      },
+      {
+        "id": 81,
+        "name": "客户平台81",
+        "dept_id": 83,
+        "manager_id": 82,
+        "budget": 127.49,
+        "start_date": "2023-05-30",
+        "end_date": "2024-06-13",
+        "status": "进行中"
+      },
+      {
+        "id": 82,
+        "name": "数字化转型82",
+        "dept_id": 32,
+        "manager_id": 17,
+        "budget": 161.66,
+        "start_date": "2023-09-04",
+        "end_date": "2024-09-16",
+        "status": "已验收"
+      },
+      {
+        "id": 83,
+        "name": "客户平台83",
+        "dept_id": 71,
+        "manager_id": 27,
+        "budget": 125.55,
+        "start_date": "2023-10-07",
+        "end_date": "2025-08-17",
+        "status": "已验收"
+      },
+      {
+        "id": 84,
+        "name": "移动端84",
+        "dept_id": 101,
+        "manager_id": 77,
+        "budget": 20.51,
+        "start_date": "2023-08-25",
+        "end_date": "2024-04-24",
+        "status": "已验收"
+      },
+      {
+        "id": 85,
+        "name": "供应链优化85",
+        "dept_id": 103,
+        "manager_id": 23,
+        "budget": 39.79,
+        "start_date": "2023-02-24",
+        "end_date": "2024-07-13",
+        "status": "进行中"
+      },
+      {
+        "id": 86,
+        "name": "供应链优化86",
+        "dept_id": 102,
+        "manager_id": 101,
+        "budget": 62.83,
+        "start_date": "2022-01-12",
+        "end_date": "2024-10-05",
+        "status": "暂停"
+      },
+      {
+        "id": 87,
+        "name": "数字化转型87",
+        "dept_id": 7,
+        "manager_id": 17,
+        "budget": 153.51,
+        "start_date": "2022-05-16",
+        "end_date": "2024-07-25",
+        "status": "进行中"
+      },
+      {
+        "id": 88,
+        "name": "客户平台88",
+        "dept_id": 100,
+        "manager_id": 47,
+        "budget": 112.38,
+        "start_date": "2023-01-05",
+        "end_date": "2024-12-14",
+        "status": "进行中"
+      },
+      {
+        "id": 89,
+        "name": "营销自动化89",
+        "dept_id": 79,
+        "manager_id": 6,
+        "budget": 150.9,
+        "start_date": "2023-01-27",
+        "end_date": "2024-06-21",
+        "status": "暂停"
+      },
+      {
+        "id": 90,
+        "name": "营销自动化90",
+        "dept_id": 8,
+        "manager_id": 62,
+        "budget": 172.51,
+        "start_date": "2023-05-15",
+        "end_date": "2024-01-25",
+        "status": "规划中"
+      },
+      {
+        "id": 91,
+        "name": "客户平台91",
+        "dept_id": 57,
+        "manager_id": 10,
+        "budget": 181.87,
+        "start_date": "2023-01-16",
+        "end_date": "2025-07-07",
+        "status": "暂停"
+      },
+      {
+        "id": 92,
+        "name": "供应链优化92",
+        "dept_id": 36,
+        "manager_id": 80,
+        "budget": 133.95,
+        "start_date": "2022-02-21",
+        "end_date": "2024-04-08",
+        "status": "暂停"
+      },
+      {
+        "id": 93,
+        "name": "API网关93",
+        "dept_id": 38,
+        "manager_id": 59,
+        "budget": 111.0,
+        "start_date": "2023-04-10",
+        "end_date": "2025-02-16",
+        "status": "规划中"
+      },
+      {
+        "id": 94,
+        "name": "客户平台94",
+        "dept_id": 15,
+        "manager_id": 84,
+        "budget": 137.16,
+        "start_date": "2023-09-09",
+        "end_date": "2025-06-29",
+        "status": "已验收"
+      },
+      {
+        "id": 95,
+        "name": "API网关95",
+        "dept_id": 30,
+        "manager_id": 53,
+        "budget": 81.01,
+        "start_date": "2022-12-17",
+        "end_date": "2025-11-20",
+        "status": "规划中"
+      },
+      {
+        "id": 96,
+        "name": "API网关96",
+        "dept_id": 13,
+        "manager_id": 41,
+        "budget": 96.82,
+        "start_date": "2022-11-20",
+        "end_date": "2025-07-20",
+        "status": "暂停"
+      },
+      {
+        "id": 97,
+        "name": "移动端97",
+        "dept_id": 61,
+        "manager_id": 9,
+        "budget": 36.42,
+        "start_date": "2022-04-29",
+        "end_date": "2025-06-17",
+        "status": "进行中"
+      },
+      {
+        "id": 98,
+        "name": "客户平台98",
+        "dept_id": 96,
+        "manager_id": 95,
+        "budget": 87.08,
+        "start_date": "2022-12-02",
+        "end_date": "2024-03-16",
+        "status": "已验收"
+      },
+      {
+        "id": 99,
+        "name": "数字化转型99",
+        "dept_id": 72,
+        "manager_id": 43,
+        "budget": 140.6,
+        "start_date": "2023-04-01",
+        "end_date": "2025-03-12",
+        "status": "规划中"
+      },
+      {
+        "id": 100,
+        "name": "移动端100",
+        "dept_id": 97,
+        "manager_id": 55,
+        "budget": 176.26,
+        "start_date": "2023-11-10",
+        "end_date": "2025-05-31",
+        "status": "进行中"
+      },
+      {
+        "id": 101,
+        "name": "安全加固101",
+        "dept_id": 46,
+        "manager_id": 14,
+        "budget": 124.03,
+        "start_date": "2023-04-12",
+        "end_date": "2024-08-30",
+        "status": "已验收"
+      },
+      {
+        "id": 102,
+        "name": "供应链优化102",
+        "dept_id": 29,
+        "manager_id": 14,
+        "budget": 83.02,
+        "start_date": "2023-05-26",
+        "end_date": "2025-01-09",
+        "status": "暂停"
+      },
+      {
+        "id": 103,
+        "name": "客户平台103",
+        "dept_id": 74,
+        "manager_id": 29,
+        "budget": 165.3,
+        "start_date": "2023-08-16",
+        "end_date": "2024-08-04",
+        "status": "进行中"
+      },
+      {
+        "id": 104,
+        "name": "安全加固104",
+        "dept_id": 35,
+        "manager_id": 90,
+        "budget": 157.23,
+        "start_date": "2022-01-23",
+        "end_date": "2024-05-20",
+        "status": "暂停"
+      },
+      {
+        "id": 105,
+        "name": "移动端105",
+        "dept_id": 19,
+        "manager_id": 73,
+        "budget": 138.32,
+        "start_date": "2022-01-05",
+        "end_date": "2024-05-20",
+        "status": "进行中"
+      }
+    ],
+    "products": [
+      {
+        "id": 1,
+        "name": "产品1-硬件设备",
+        "category": "运维支持",
+        "unit_price": 3202.54
+      },
+      {
+        "id": 2,
+        "name": "产品2-软件服务",
+        "category": "软件服务",
+        "unit_price": 3755.95
+      },
+      {
+        "id": 3,
+        "name": "产品3-硬件设备",
+        "category": "咨询服务",
+        "unit_price": 2157.18
+      },
+      {
+        "id": 4,
+        "name": "产品4-云服务",
+        "category": "硬件设备",
+        "unit_price": 1913.26
+      },
+      {
+        "id": 5,
+        "name": "产品5-运维支持",
+        "category": "云服务",
+        "unit_price": 3906.49
+      },
+      {
+        "id": 6,
+        "name": "产品6-培训",
+        "category": "培训",
+        "unit_price": 516.29
+      },
+      {
+        "id": 7,
+        "name": "产品7-软件服务",
+        "category": "硬件设备",
+        "unit_price": 871.31
+      },
+      {
+        "id": 8,
+        "name": "产品8-培训",
+        "category": "软件服务",
+        "unit_price": 3402.45
+      },
+      {
+        "id": 9,
+        "name": "产品9-云服务",
+        "category": "咨询服务",
+        "unit_price": 3343.5
+      },
+      {
+        "id": 10,
+        "name": "产品10-咨询服务",
+        "category": "培训",
+        "unit_price": 2266.02
+      },
+      {
+        "id": 11,
+        "name": "产品11-云服务",
+        "category": "硬件设备",
+        "unit_price": 3799.22
+      },
+      {
+        "id": 12,
+        "name": "产品12-软件服务",
+        "category": "云服务",
+        "unit_price": 2206.58
+      },
+      {
+        "id": 13,
+        "name": "产品13-云服务",
+        "category": "运维支持",
+        "unit_price": 3424.58
+      },
+      {
+        "id": 14,
+        "name": "产品14-咨询服务",
+        "category": "培训",
+        "unit_price": 3368.95
+      },
+      {
+        "id": 15,
+        "name": "产品15-软件服务",
+        "category": "硬件设备",
+        "unit_price": 2036.79
+      },
+      {
+        "id": 16,
+        "name": "产品16-培训",
+        "category": "软件服务",
+        "unit_price": 137.67
+      },
+      {
+        "id": 17,
+        "name": "产品17-云服务",
+        "category": "硬件设备",
+        "unit_price": 3860.01
+      },
+      {
+        "id": 18,
+        "name": "产品18-云服务",
+        "category": "云服务",
+        "unit_price": 1707.8
+      },
+      {
+        "id": 19,
+        "name": "产品19-软件服务",
+        "category": "咨询服务",
+        "unit_price": 3760.37
+      },
+      {
+        "id": 20,
+        "name": "产品20-硬件设备",
+        "category": "硬件设备",
+        "unit_price": 1963.02
+      },
+      {
+        "id": 21,
+        "name": "产品21-运维支持",
+        "category": "硬件设备",
+        "unit_price": 2551.29
+      },
+      {
+        "id": 22,
+        "name": "产品22-运维支持",
+        "category": "云服务",
+        "unit_price": 453.17
+      },
+      {
+        "id": 23,
+        "name": "产品23-运维支持",
+        "category": "软件服务",
+        "unit_price": 2237.48
+      },
+      {
+        "id": 24,
+        "name": "产品24-咨询服务",
+        "category": "软件服务",
+        "unit_price": 4324.34
+      },
+      {
+        "id": 25,
+        "name": "产品25-培训",
+        "category": "咨询服务",
+        "unit_price": 2909.66
+      },
+      {
+        "id": 26,
+        "name": "产品26-运维支持",
+        "category": "运维支持",
+        "unit_price": 2146.7
+      },
+      {
+        "id": 27,
+        "name": "产品27-软件服务",
+        "category": "咨询服务",
+        "unit_price": 202.2
+      },
+      {
+        "id": 28,
+        "name": "产品28-云服务",
+        "category": "硬件设备",
+        "unit_price": 4026.48
+      },
+      {
+        "id": 29,
+        "name": "产品29-培训",
+        "category": "咨询服务",
+        "unit_price": 4176.93
+      },
+      {
+        "id": 30,
+        "name": "产品30-云服务",
+        "category": "软件服务",
+        "unit_price": 2239.89
+      },
+      {
+        "id": 31,
+        "name": "产品31-软件服务",
+        "category": "硬件设备",
+        "unit_price": 2234.81
+      },
+      {
+        "id": 32,
+        "name": "产品32-咨询服务",
+        "category": "培训",
+        "unit_price": 485.37
+      },
+      {
+        "id": 33,
+        "name": "产品33-云服务",
+        "category": "运维支持",
+        "unit_price": 1763.62
+      },
+      {
+        "id": 34,
+        "name": "产品34-云服务",
+        "category": "硬件设备",
+        "unit_price": 474.26
+      },
+      {
+        "id": 35,
+        "name": "产品35-运维支持",
+        "category": "软件服务",
+        "unit_price": 2699.96
+      },
+      {
+        "id": 36,
+        "name": "产品36-硬件设备",
+        "category": "云服务",
+        "unit_price": 1820.39
+      },
+      {
+        "id": 37,
+        "name": "产品37-运维支持",
+        "category": "硬件设备",
+        "unit_price": 1257.72
+      },
+      {
+        "id": 38,
+        "name": "产品38-硬件设备",
+        "category": "云服务",
+        "unit_price": 1066.63
+      },
+      {
+        "id": 39,
+        "name": "产品39-培训",
+        "category": "硬件设备",
+        "unit_price": 3825.05
+      },
+      {
+        "id": 40,
+        "name": "产品40-运维支持",
+        "category": "软件服务",
+        "unit_price": 968.02
+      },
+      {
+        "id": 41,
+        "name": "产品41-运维支持",
+        "category": "咨询服务",
+        "unit_price": 2373.37
+      },
+      {
+        "id": 42,
+        "name": "产品42-培训",
+        "category": "培训",
+        "unit_price": 2299.64
+      },
+      {
+        "id": 43,
+        "name": "产品43-培训",
+        "category": "运维支持",
+        "unit_price": 3212.96
+      },
+      {
+        "id": 44,
+        "name": "产品44-培训",
+        "category": "云服务",
+        "unit_price": 4334.81
+      },
+      {
+        "id": 45,
+        "name": "产品45-运维支持",
+        "category": "云服务",
+        "unit_price": 839.69
+      },
+      {
+        "id": 46,
+        "name": "产品46-软件服务",
+        "category": "咨询服务",
+        "unit_price": 2266.82
+      },
+      {
+        "id": 47,
+        "name": "产品47-云服务",
+        "category": "云服务",
+        "unit_price": 2997.96
+      },
+      {
+        "id": 48,
+        "name": "产品48-云服务",
+        "category": "培训",
+        "unit_price": 463.53
+      },
+      {
+        "id": 49,
+        "name": "产品49-咨询服务",
+        "category": "咨询服务",
+        "unit_price": 284.28
+      },
+      {
+        "id": 50,
+        "name": "产品50-云服务",
+        "category": "云服务",
+        "unit_price": 475.98
+      },
+      {
+        "id": 51,
+        "name": "产品51-软件服务",
+        "category": "培训",
+        "unit_price": 3010.99
+      },
+      {
+        "id": 52,
+        "name": "产品52-咨询服务",
+        "category": "咨询服务",
+        "unit_price": 2943.61
+      },
+      {
+        "id": 53,
+        "name": "产品53-运维支持",
+        "category": "软件服务",
+        "unit_price": 2303.7
+      },
+      {
+        "id": 54,
+        "name": "产品54-培训",
+        "category": "运维支持",
+        "unit_price": 1022.37
+      },
+      {
+        "id": 55,
+        "name": "产品55-培训",
+        "category": "咨询服务",
+        "unit_price": 2556.7
+      },
+      {
+        "id": 56,
+        "name": "产品56-软件服务",
+        "category": "咨询服务",
+        "unit_price": 607.16
+      },
+      {
+        "id": 57,
+        "name": "产品57-云服务",
+        "category": "运维支持",
+        "unit_price": 513.21
+      },
+      {
+        "id": 58,
+        "name": "产品58-运维支持",
+        "category": "硬件设备",
+        "unit_price": 291.8
+      },
+      {
+        "id": 59,
+        "name": "产品59-运维支持",
+        "category": "咨询服务",
+        "unit_price": 4955.83
+      },
+      {
+        "id": 60,
+        "name": "产品60-培训",
+        "category": "培训",
+        "unit_price": 3088.05
+      },
+      {
+        "id": 61,
+        "name": "产品61-云服务",
+        "category": "云服务",
+        "unit_price": 4597.89
+      },
+      {
+        "id": 62,
+        "name": "产品62-咨询服务",
+        "category": "咨询服务",
+        "unit_price": 3894.88
+      },
+      {
+        "id": 63,
+        "name": "产品63-运维支持",
+        "category": "培训",
+        "unit_price": 356.59
+      },
+      {
+        "id": 64,
+        "name": "产品64-运维支持",
+        "category": "运维支持",
+        "unit_price": 1739.78
+      },
+      {
+        "id": 65,
+        "name": "产品65-云服务",
+        "category": "软件服务",
+        "unit_price": 2834.02
+      },
+      {
+        "id": 66,
+        "name": "产品66-咨询服务",
+        "category": "云服务",
+        "unit_price": 1334.78
+      },
+      {
+        "id": 67,
+        "name": "产品67-运维支持",
+        "category": "培训",
+        "unit_price": 4379.07
+      },
+      {
+        "id": 68,
+        "name": "产品68-云服务",
+        "category": "软件服务",
+        "unit_price": 2955.42
+      },
+      {
+        "id": 69,
+        "name": "产品69-硬件设备",
+        "category": "云服务",
+        "unit_price": 1620.14
+      },
+      {
+        "id": 70,
+        "name": "产品70-运维支持",
+        "category": "运维支持",
+        "unit_price": 3344.46
+      },
+      {
+        "id": 71,
+        "name": "产品71-硬件设备",
+        "category": "培训",
+        "unit_price": 3573.29
+      },
+      {
+        "id": 72,
+        "name": "产品72-软件服务",
+        "category": "云服务",
+        "unit_price": 2838.72
+      },
+      {
+        "id": 73,
+        "name": "产品73-运维支持",
+        "category": "云服务",
+        "unit_price": 4084.61
+      },
+      {
+        "id": 74,
+        "name": "产品74-运维支持",
+        "category": "运维支持",
+        "unit_price": 4161.9
+      },
+      {
+        "id": 75,
+        "name": "产品75-运维支持",
+        "category": "运维支持",
+        "unit_price": 4571.0
+      },
+      {
+        "id": 76,
+        "name": "产品76-软件服务",
+        "category": "运维支持",
+        "unit_price": 3385.23
+      },
+      {
+        "id": 77,
+        "name": "产品77-培训",
+        "category": "云服务",
+        "unit_price": 189.33
+      },
+      {
+        "id": 78,
+        "name": "产品78-云服务",
+        "category": "硬件设备",
+        "unit_price": 4760.73
+      },
+      {
+        "id": 79,
+        "name": "产品79-云服务",
+        "category": "咨询服务",
+        "unit_price": 1040.83
+      },
+      {
+        "id": 80,
+        "name": "产品80-硬件设备",
+        "category": "硬件设备",
+        "unit_price": 478.11
+      },
+      {
+        "id": 81,
+        "name": "产品81-软件服务",
+        "category": "培训",
+        "unit_price": 3877.29
+      },
+      {
+        "id": 82,
+        "name": "产品82-运维支持",
+        "category": "培训",
+        "unit_price": 284.96
+      },
+      {
+        "id": 83,
+        "name": "产品83-云服务",
+        "category": "培训",
+        "unit_price": 742.14
+      },
+      {
+        "id": 84,
+        "name": "产品84-咨询服务",
+        "category": "硬件设备",
+        "unit_price": 895.01
+      },
+      {
+        "id": 85,
+        "name": "产品85-运维支持",
+        "category": "培训",
+        "unit_price": 4064.31
+      },
+      {
+        "id": 86,
+        "name": "产品86-硬件设备",
+        "category": "运维支持",
+        "unit_price": 2244.6
+      },
+      {
+        "id": 87,
+        "name": "产品87-咨询服务",
+        "category": "云服务",
+        "unit_price": 3414.18
+      },
+      {
+        "id": 88,
+        "name": "产品88-硬件设备",
+        "category": "咨询服务",
+        "unit_price": 3091.92
+      },
+      {
+        "id": 89,
+        "name": "产品89-运维支持",
+        "category": "咨询服务",
+        "unit_price": 1246.61
+      },
+      {
+        "id": 90,
+        "name": "产品90-硬件设备",
+        "category": "云服务",
+        "unit_price": 4831.42
+      },
+      {
+        "id": 91,
+        "name": "产品91-咨询服务",
+        "category": "硬件设备",
+        "unit_price": 1902.42
+      },
+      {
+        "id": 92,
+        "name": "产品92-培训",
+        "category": "咨询服务",
+        "unit_price": 2362.23
+      },
+      {
+        "id": 93,
+        "name": "产品93-云服务",
+        "category": "咨询服务",
+        "unit_price": 2564.24
+      },
+      {
+        "id": 94,
+        "name": "产品94-咨询服务",
+        "category": "硬件设备",
+        "unit_price": 4102.77
+      },
+      {
+        "id": 95,
+        "name": "产品95-培训",
+        "category": "硬件设备",
+        "unit_price": 4377.71
+      },
+      {
+        "id": 96,
+        "name": "产品96-软件服务",
+        "category": "运维支持",
+        "unit_price": 2454.89
+      },
+      {
+        "id": 97,
+        "name": "产品97-云服务",
+        "category": "培训",
+        "unit_price": 4678.04
+      },
+      {
+        "id": 98,
+        "name": "产品98-运维支持",
+        "category": "培训",
+        "unit_price": 4270.71
+      },
+      {
+        "id": 99,
+        "name": "产品99-云服务",
+        "category": "软件服务",
+        "unit_price": 3839.27
+      },
+      {
+        "id": 100,
+        "name": "产品100-云服务",
+        "category": "咨询服务",
+        "unit_price": 4536.0
+      },
+      {
+        "id": 101,
+        "name": "产品101-硬件设备",
+        "category": "咨询服务",
+        "unit_price": 549.4
+      },
+      {
+        "id": 102,
+        "name": "产品102-硬件设备",
+        "category": "咨询服务",
+        "unit_price": 4434.69
+      },
+      {
+        "id": 103,
+        "name": "产品103-软件服务",
+        "category": "咨询服务",
+        "unit_price": 360.96
+      },
+      {
+        "id": 104,
+        "name": "产品104-培训",
+        "category": "云服务",
+        "unit_price": 1255.31
+      },
+      {
+        "id": 105,
+        "name": "产品105-软件服务",
+        "category": "云服务",
+        "unit_price": 1200.24
+      }
+    ],
+    "sales_orders": [
+      {
+        "id": 1,
+        "customer_name": "教育公司1",
+        "employee_id": 102,
+        "product_id": 19,
+        "quantity": 21,
+        "order_date": "2023-04-17",
+        "amount": 60781.33
+      },
+      {
+        "id": 2,
+        "customer_name": "制造公司2",
+        "employee_id": 98,
+        "product_id": 91,
+        "quantity": 3,
+        "order_date": "2023-12-31",
+        "amount": 2888.05
+      },
+      {
+        "id": 3,
+        "customer_name": "集团公司3",
+        "employee_id": 33,
+        "product_id": 28,
+        "quantity": 29,
+        "order_date": "2024-10-10",
+        "amount": 56868.83
+      },
+      {
+        "id": 4,
+        "customer_name": "金融公司4",
+        "employee_id": 15,
+        "product_id": 100,
+        "quantity": 10,
+        "order_date": "2023-08-12",
+        "amount": 17299.67
+      },
+      {
+        "id": 5,
+        "customer_name": "金融公司5",
+        "employee_id": 82,
+        "product_id": 102,
+        "quantity": 16,
+        "order_date": "2024-04-28",
+        "amount": 14869.13
+      },
+      {
+        "id": 6,
+        "customer_name": "物流公司6",
+        "employee_id": 77,
+        "product_id": 69,
+        "quantity": 30,
+        "order_date": "2023-01-13",
+        "amount": 8749.18
+      },
+      {
+        "id": 7,
+        "customer_name": "制造公司7",
+        "employee_id": 38,
+        "product_id": 55,
+        "quantity": 41,
+        "order_date": "2023-01-02",
+        "amount": 63691.03
+      },
+      {
+        "id": 8,
+        "customer_name": "制造公司8",
+        "employee_id": 86,
+        "product_id": 86,
+        "quantity": 40,
+        "order_date": "2023-03-08",
+        "amount": 45244.27
+      },
+      {
+        "id": 9,
+        "customer_name": "集团公司9",
+        "employee_id": 50,
+        "product_id": 61,
+        "quantity": 34,
+        "order_date": "2023-02-03",
+        "amount": 95199.37
+      },
+      {
+        "id": 10,
+        "customer_name": "集团公司10",
+        "employee_id": 46,
+        "product_id": 101,
+        "quantity": 41,
+        "order_date": "2023-02-22",
+        "amount": 49465.6
+      },
+      {
+        "id": 11,
+        "customer_name": "科技公司11",
+        "employee_id": 99,
+        "product_id": 75,
+        "quantity": 23,
+        "order_date": "2024-07-25",
+        "amount": 18672.02
+      },
+      {
+        "id": 12,
+        "customer_name": "教育公司12",
+        "employee_id": 105,
+        "product_id": 83,
+        "quantity": 49,
+        "order_date": "2023-05-16",
+        "amount": 49774.38
+      },
+      {
+        "id": 13,
+        "customer_name": "物流公司13",
+        "employee_id": 81,
+        "product_id": 24,
+        "quantity": 50,
+        "order_date": "2024-09-22",
+        "amount": 109292.93
+      },
+      {
+        "id": 14,
+        "customer_name": "物流公司14",
+        "employee_id": 5,
+        "product_id": 38,
+        "quantity": 9,
+        "order_date": "2023-06-06",
+        "amount": 2617.25
+      },
+      {
+        "id": 15,
+        "customer_name": "教育公司15",
+        "employee_id": 40,
+        "product_id": 66,
+        "quantity": 3,
+        "order_date": "2023-11-06",
+        "amount": 7459.76
+      },
+      {
+        "id": 16,
+        "customer_name": "零售公司16",
+        "employee_id": 37,
+        "product_id": 46,
+        "quantity": 35,
+        "order_date": "2024-10-31",
+        "amount": 49161.38
+      },
+      {
+        "id": 17,
+        "customer_name": "医疗公司17",
+        "employee_id": 16,
+        "product_id": 103,
+        "quantity": 50,
+        "order_date": "2023-10-13",
+        "amount": 12117.31
+      },
+      {
+        "id": 18,
+        "customer_name": "金融公司18",
+        "employee_id": 44,
+        "product_id": 24,
+        "quantity": 28,
+        "order_date": "2024-01-21",
+        "amount": 76851.73
+      },
+      {
+        "id": 19,
+        "customer_name": "医疗公司19",
+        "employee_id": 103,
+        "product_id": 11,
+        "quantity": 45,
+        "order_date": "2024-07-18",
+        "amount": 72372.76
+      },
+      {
+        "id": 20,
+        "customer_name": "制造公司20",
+        "employee_id": 70,
+        "product_id": 38,
+        "quantity": 28,
+        "order_date": "2023-09-07",
+        "amount": 9303.27
+      },
+      {
+        "id": 21,
+        "customer_name": "医疗公司21",
+        "employee_id": 58,
+        "product_id": 78,
+        "quantity": 7,
+        "order_date": "2024-07-11",
+        "amount": 2362.82
+      },
+      {
+        "id": 22,
+        "customer_name": "物流公司22",
+        "employee_id": 6,
+        "product_id": 94,
+        "quantity": 28,
+        "order_date": "2024-11-06",
+        "amount": 16239.95
+      },
+      {
+        "id": 23,
+        "customer_name": "集团公司23",
+        "employee_id": 10,
+        "product_id": 86,
+        "quantity": 23,
+        "order_date": "2024-05-10",
+        "amount": 43028.83
+      },
+      {
+        "id": 24,
+        "customer_name": "制造公司24",
+        "employee_id": 4,
+        "product_id": 19,
+        "quantity": 26,
+        "order_date": "2024-10-21",
+        "amount": 30896.7
+      },
+      {
+        "id": 25,
+        "customer_name": "制造公司25",
+        "employee_id": 9,
+        "product_id": 31,
+        "quantity": 39,
+        "order_date": "2024-08-27",
+        "amount": 80093.66
+      },
+      {
+        "id": 26,
+        "customer_name": "集团公司26",
+        "employee_id": 78,
+        "product_id": 20,
+        "quantity": 42,
+        "order_date": "2024-06-11",
+        "amount": 48246.81
+      },
+      {
+        "id": 27,
+        "customer_name": "科技公司27",
+        "employee_id": 74,
+        "product_id": 18,
+        "quantity": 29,
+        "order_date": "2024-02-16",
+        "amount": 81637.71
+      },
+      {
+        "id": 28,
+        "customer_name": "零售公司28",
+        "employee_id": 15,
+        "product_id": 4,
+        "quantity": 24,
+        "order_date": "2024-07-25",
+        "amount": 30553.43
+      },
+      {
+        "id": 29,
+        "customer_name": "科技公司29",
+        "employee_id": 34,
+        "product_id": 100,
+        "quantity": 12,
+        "order_date": "2023-07-22",
+        "amount": 18356.93
+      },
+      {
+        "id": 30,
+        "customer_name": "医疗公司30",
+        "employee_id": 89,
+        "product_id": 63,
+        "quantity": 46,
+        "order_date": "2023-06-05",
+        "amount": 67316.07
+      },
+      {
+        "id": 31,
+        "customer_name": "制造公司31",
+        "employee_id": 92,
+        "product_id": 57,
+        "quantity": 8,
+        "order_date": "2023-03-10",
+        "amount": 3780.68
+      },
+      {
+        "id": 32,
+        "customer_name": "教育公司32",
+        "employee_id": 91,
+        "product_id": 9,
+        "quantity": 44,
+        "order_date": "2024-03-03",
+        "amount": 134082.31
+      },
+      {
+        "id": 33,
+        "customer_name": "制造公司33",
+        "employee_id": 92,
+        "product_id": 91,
+        "quantity": 35,
+        "order_date": "2024-06-27",
+        "amount": 32312.17
+      },
+      {
+        "id": 34,
+        "customer_name": "零售公司34",
+        "employee_id": 16,
+        "product_id": 26,
+        "quantity": 41,
+        "order_date": "2024-09-07",
+        "amount": 24455.77
+      },
+      {
+        "id": 35,
+        "customer_name": "教育公司35",
+        "employee_id": 71,
+        "product_id": 74,
+        "quantity": 9,
+        "order_date": "2023-10-14",
+        "amount": 7074.54
+      },
+      {
+        "id": 36,
+        "customer_name": "科技公司36",
+        "employee_id": 9,
+        "product_id": 40,
+        "quantity": 30,
+        "order_date": "2023-11-06",
+        "amount": 73295.2
+      },
+      {
+        "id": 37,
+        "customer_name": "金融公司37",
+        "employee_id": 74,
+        "product_id": 10,
+        "quantity": 46,
+        "order_date": "2023-04-08",
+        "amount": 100755.35
+      },
+      {
+        "id": 38,
+        "customer_name": "教育公司38",
+        "employee_id": 17,
+        "product_id": 100,
+        "quantity": 21,
+        "order_date": "2024-03-04",
+        "amount": 41012.18
+      },
+      {
+        "id": 39,
+        "customer_name": "制造公司39",
+        "employee_id": 56,
+        "product_id": 65,
+        "quantity": 41,
+        "order_date": "2024-11-05",
+        "amount": 75969.04
+      },
+      {
+        "id": 40,
+        "customer_name": "医疗公司40",
+        "employee_id": 22,
+        "product_id": 21,
+        "quantity": 4,
+        "order_date": "2023-09-08",
+        "amount": 10062.3
+      },
+      {
+        "id": 41,
+        "customer_name": "医疗公司41",
+        "employee_id": 11,
+        "product_id": 33,
+        "quantity": 46,
+        "order_date": "2023-06-02",
+        "amount": 36229.32
+      },
+      {
+        "id": 42,
+        "customer_name": "医疗公司42",
+        "employee_id": 79,
+        "product_id": 69,
+        "quantity": 41,
+        "order_date": "2023-03-14",
+        "amount": 115153.02
+      },
+      {
+        "id": 43,
+        "customer_name": "制造公司43",
+        "employee_id": 22,
+        "product_id": 85,
+        "quantity": 33,
+        "order_date": "2024-04-30",
+        "amount": 65235.85
+      },
+      {
+        "id": 44,
+        "customer_name": "集团公司44",
+        "employee_id": 4,
+        "product_id": 11,
+        "quantity": 47,
+        "order_date": "2023-02-05",
+        "amount": 125569.93
+      },
+      {
+        "id": 45,
+        "customer_name": "零售公司45",
+        "employee_id": 99,
+        "product_id": 74,
+        "quantity": 42,
+        "order_date": "2023-11-20",
+        "amount": 95801.35
+      },
+      {
+        "id": 46,
+        "customer_name": "医疗公司46",
+        "employee_id": 83,
+        "product_id": 39,
+        "quantity": 40,
+        "order_date": "2024-01-11",
+        "amount": 78107.47
+      },
+      {
+        "id": 47,
+        "customer_name": "医疗公司47",
+        "employee_id": 59,
+        "product_id": 10,
+        "quantity": 16,
+        "order_date": "2024-06-18",
+        "amount": 39657.91
+      },
+      {
+        "id": 48,
+        "customer_name": "物流公司48",
+        "employee_id": 27,
+        "product_id": 44,
+        "quantity": 4,
+        "order_date": "2024-04-16",
+        "amount": 2214.87
+      },
+      {
+        "id": 49,
+        "customer_name": "教育公司49",
+        "employee_id": 52,
+        "product_id": 17,
+        "quantity": 10,
+        "order_date": "2024-08-13",
+        "amount": 10284.68
+      },
+      {
+        "id": 50,
+        "customer_name": "零售公司0",
+        "employee_id": 60,
+        "product_id": 16,
+        "quantity": 24,
+        "order_date": "2023-07-27",
+        "amount": 36736.51
+      },
+      {
+        "id": 51,
+        "customer_name": "医疗公司1",
+        "employee_id": 50,
+        "product_id": 79,
+        "quantity": 29,
+        "order_date": "2023-11-21",
+        "amount": 22792.27
+      },
+      {
+        "id": 52,
+        "customer_name": "教育公司2",
+        "employee_id": 74,
+        "product_id": 93,
+        "quantity": 16,
+        "order_date": "2023-08-31",
+        "amount": 48130.08
+      },
+      {
+        "id": 53,
+        "customer_name": "物流公司3",
+        "employee_id": 64,
+        "product_id": 40,
+        "quantity": 13,
+        "order_date": "2024-01-22",
+        "amount": 30064.43
+      },
+      {
+        "id": 54,
+        "customer_name": "物流公司4",
+        "employee_id": 31,
+        "product_id": 28,
+        "quantity": 2,
+        "order_date": "2024-03-29",
+        "amount": 714.57
+      },
+      {
+        "id": 55,
+        "customer_name": "物流公司5",
+        "employee_id": 37,
+        "product_id": 69,
+        "quantity": 23,
+        "order_date": "2023-01-07",
+        "amount": 5424.28
+      },
+      {
+        "id": 56,
+        "customer_name": "教育公司6",
+        "employee_id": 98,
+        "product_id": 52,
+        "quantity": 7,
+        "order_date": "2023-10-12",
+        "amount": 9809.17
+      },
+      {
+        "id": 57,
+        "customer_name": "零售公司7",
+        "employee_id": 47,
+        "product_id": 71,
+        "quantity": 3,
+        "order_date": "2023-08-13",
+        "amount": 3811.67
+      },
+      {
+        "id": 58,
+        "customer_name": "医疗公司8",
+        "employee_id": 80,
+        "product_id": 88,
+        "quantity": 5,
+        "order_date": "2024-04-19",
+        "amount": 6071.76
+      },
+      {
+        "id": 59,
+        "customer_name": "教育公司9",
+        "employee_id": 102,
+        "product_id": 44,
+        "quantity": 8,
+        "order_date": "2024-03-09",
+        "amount": 3632.31
+      },
+      {
+        "id": 60,
+        "customer_name": "金融公司10",
+        "employee_id": 65,
+        "product_id": 6,
+        "quantity": 24,
+        "order_date": "2023-02-05",
+        "amount": 53292.06
+      },
+      {
+        "id": 61,
+        "customer_name": "物流公司11",
+        "employee_id": 67,
+        "product_id": 59,
+        "quantity": 3,
+        "order_date": "2023-04-26",
+        "amount": 1467.32
+      },
+      {
+        "id": 62,
+        "customer_name": "教育公司12",
+        "employee_id": 21,
+        "product_id": 51,
+        "quantity": 39,
+        "order_date": "2024-04-23",
+        "amount": 101133.95
+      },
+      {
+        "id": 63,
+        "customer_name": "物流公司13",
+        "employee_id": 91,
+        "product_id": 73,
+        "quantity": 48,
+        "order_date": "2023-08-21",
+        "amount": 123234.69
+      },
+      {
+        "id": 64,
+        "customer_name": "科技公司14",
+        "employee_id": 54,
+        "product_id": 75,
+        "quantity": 31,
+        "order_date": "2023-08-27",
+        "amount": 75429.55
+      },
+      {
+        "id": 65,
+        "customer_name": "物流公司15",
+        "employee_id": 34,
+        "product_id": 84,
+        "quantity": 47,
+        "order_date": "2024-08-31",
+        "amount": 125164.47
+      },
+      {
+        "id": 66,
+        "customer_name": "集团公司16",
+        "employee_id": 75,
+        "product_id": 62,
+        "quantity": 50,
+        "order_date": "2023-05-13",
+        "amount": 86457.43
+      },
+      {
+        "id": 67,
+        "customer_name": "金融公司17",
+        "employee_id": 19,
+        "product_id": 88,
+        "quantity": 34,
+        "order_date": "2023-07-08",
+        "amount": 66205.11
+      },
+      {
+        "id": 68,
+        "customer_name": "零售公司18",
+        "employee_id": 3,
+        "product_id": 57,
+        "quantity": 3,
+        "order_date": "2023-09-01",
+        "amount": 5387.25
+      },
+      {
+        "id": 69,
+        "customer_name": "金融公司19",
+        "employee_id": 65,
+        "product_id": 100,
+        "quantity": 27,
+        "order_date": "2024-04-19",
+        "amount": 14834.36
+      },
+      {
+        "id": 70,
+        "customer_name": "集团公司20",
+        "employee_id": 91,
+        "product_id": 18,
+        "quantity": 31,
+        "order_date": "2024-02-07",
+        "amount": 83489.91
+      },
+      {
+        "id": 71,
+        "customer_name": "物流公司21",
+        "employee_id": 68,
+        "product_id": 49,
+        "quantity": 14,
+        "order_date": "2023-09-01",
+        "amount": 25376.04
+      },
+      {
+        "id": 72,
+        "customer_name": "教育公司22",
+        "employee_id": 87,
+        "product_id": 99,
+        "quantity": 12,
+        "order_date": "2024-11-04",
+        "amount": 17253.21
+      },
+      {
+        "id": 73,
+        "customer_name": "医疗公司23",
+        "employee_id": 79,
+        "product_id": 62,
+        "quantity": 47,
+        "order_date": "2023-05-30",
+        "amount": 100445.69
+      },
+      {
+        "id": 74,
+        "customer_name": "医疗公司24",
+        "employee_id": 99,
+        "product_id": 37,
+        "quantity": 16,
+        "order_date": "2024-07-01",
+        "amount": 14252.82
+      },
+      {
+        "id": 75,
+        "customer_name": "物流公司25",
+        "employee_id": 45,
+        "product_id": 72,
+        "quantity": 14,
+        "order_date": "2024-09-09",
+        "amount": 29391.44
+      },
+      {
+        "id": 76,
+        "customer_name": "金融公司26",
+        "employee_id": 51,
+        "product_id": 105,
+        "quantity": 47,
+        "order_date": "2023-09-26",
+        "amount": 40385.32
+      },
+      {
+        "id": 77,
+        "customer_name": "医疗公司27",
+        "employee_id": 92,
+        "product_id": 11,
+        "quantity": 50,
+        "order_date": "2023-09-27",
+        "amount": 119119.95
+      },
+      {
+        "id": 78,
+        "customer_name": "零售公司28",
+        "employee_id": 26,
+        "product_id": 69,
+        "quantity": 29,
+        "order_date": "2023-07-30",
+        "amount": 59503.51
+      },
+      {
+        "id": 79,
+        "customer_name": "零售公司29",
+        "employee_id": 32,
+        "product_id": 7,
+        "quantity": 36,
+        "order_date": "2024-06-04",
+        "amount": 73513.5
+      },
+      {
+        "id": 80,
+        "customer_name": "科技公司30",
+        "employee_id": 53,
+        "product_id": 43,
+        "quantity": 34,
+        "order_date": "2024-07-11",
+        "amount": 24965.99
+      },
+      {
+        "id": 81,
+        "customer_name": "集团公司31",
+        "employee_id": 71,
+        "product_id": 21,
+        "quantity": 31,
+        "order_date": "2023-11-13",
+        "amount": 12467.66
+      },
+      {
+        "id": 82,
+        "customer_name": "物流公司32",
+        "employee_id": 84,
+        "product_id": 26,
+        "quantity": 42,
+        "order_date": "2024-08-10",
+        "amount": 122555.18
+      },
+      {
+        "id": 83,
+        "customer_name": "科技公司33",
+        "employee_id": 84,
+        "product_id": 74,
+        "quantity": 19,
+        "order_date": "2023-06-30",
+        "amount": 19882.32
+      },
+      {
+        "id": 84,
+        "customer_name": "集团公司34",
+        "employee_id": 23,
+        "product_id": 54,
+        "quantity": 35,
+        "order_date": "2024-11-16",
+        "amount": 81225.95
+      },
+      {
+        "id": 85,
+        "customer_name": "金融公司35",
+        "employee_id": 101,
+        "product_id": 64,
+        "quantity": 12,
+        "order_date": "2023-05-25",
+        "amount": 32138.0
+      },
+      {
+        "id": 86,
+        "customer_name": "集团公司36",
+        "employee_id": 2,
+        "product_id": 39,
+        "quantity": 48,
+        "order_date": "2024-03-17",
+        "amount": 144639.03
+      },
+      {
+        "id": 87,
+        "customer_name": "医疗公司37",
+        "employee_id": 59,
+        "product_id": 83,
+        "quantity": 39,
+        "order_date": "2024-02-26",
+        "amount": 16810.14
+      },
+      {
+        "id": 88,
+        "customer_name": "物流公司38",
+        "employee_id": 35,
+        "product_id": 25,
+        "quantity": 34,
+        "order_date": "2024-09-20",
+        "amount": 54384.8
+      },
+      {
+        "id": 89,
+        "customer_name": "医疗公司39",
+        "employee_id": 92,
+        "product_id": 24,
+        "quantity": 8,
+        "order_date": "2023-01-11",
+        "amount": 8667.64
+      },
+      {
+        "id": 90,
+        "customer_name": "零售公司40",
+        "employee_id": 23,
+        "product_id": 79,
+        "quantity": 48,
+        "order_date": "2024-10-26",
+        "amount": 50665.98
+      },
+      {
+        "id": 91,
+        "customer_name": "教育公司41",
+        "employee_id": 12,
+        "product_id": 52,
+        "quantity": 41,
+        "order_date": "2024-06-03",
+        "amount": 114379.9
+      },
+      {
+        "id": 92,
+        "customer_name": "教育公司42",
+        "employee_id": 32,
+        "product_id": 1,
+        "quantity": 7,
+        "order_date": "2023-07-22",
+        "amount": 4291.12
+      },
+      {
+        "id": 93,
+        "customer_name": "教育公司43",
+        "employee_id": 39,
+        "product_id": 75,
+        "quantity": 25,
+        "order_date": "2024-07-15",
+        "amount": 20071.98
+      },
+      {
+        "id": 94,
+        "customer_name": "零售公司44",
+        "employee_id": 8,
+        "product_id": 86,
+        "quantity": 37,
+        "order_date": "2023-04-02",
+        "amount": 5002.64
+      },
+      {
+        "id": 95,
+        "customer_name": "医疗公司45",
+        "employee_id": 89,
+        "product_id": 16,
+        "quantity": 30,
+        "order_date": "2024-05-11",
+        "amount": 29411.36
+      },
+      {
+        "id": 96,
+        "customer_name": "制造公司46",
+        "employee_id": 62,
+        "product_id": 20,
+        "quantity": 19,
+        "order_date": "2023-12-20",
+        "amount": 21533.35
+      },
+      {
+        "id": 97,
+        "customer_name": "物流公司47",
+        "employee_id": 97,
+        "product_id": 69,
+        "quantity": 48,
+        "order_date": "2024-09-14",
+        "amount": 140646.07
+      },
+      {
+        "id": 98,
+        "customer_name": "科技公司48",
+        "employee_id": 68,
+        "product_id": 58,
+        "quantity": 43,
+        "order_date": "2024-02-15",
+        "amount": 110061.27
+      },
+      {
+        "id": 99,
+        "customer_name": "科技公司49",
+        "employee_id": 8,
+        "product_id": 71,
+        "quantity": 46,
+        "order_date": "2024-01-28",
+        "amount": 55067.93
+      },
+      {
+        "id": 100,
+        "customer_name": "教育公司0",
+        "employee_id": 67,
+        "product_id": 57,
+        "quantity": 13,
+        "order_date": "2023-04-01",
+        "amount": 22089.27
+      },
+      {
+        "id": 101,
+        "customer_name": "科技公司1",
+        "employee_id": 66,
+        "product_id": 58,
+        "quantity": 44,
+        "order_date": "2024-09-20",
+        "amount": 30863.55
+      },
+      {
+        "id": 102,
+        "customer_name": "物流公司2",
+        "employee_id": 73,
+        "product_id": 8,
+        "quantity": 4,
+        "order_date": "2024-03-10",
+        "amount": 5667.3
+      },
+      {
+        "id": 103,
+        "customer_name": "集团公司3",
+        "employee_id": 51,
+        "product_id": 33,
+        "quantity": 30,
+        "order_date": "2024-09-26",
+        "amount": 60350.55
+      },
+      {
+        "id": 104,
+        "customer_name": "集团公司4",
+        "employee_id": 55,
+        "product_id": 45,
+        "quantity": 1,
+        "order_date": "2024-06-28",
+        "amount": 2280.55
+      },
+      {
+        "id": 105,
+        "customer_name": "科技公司5",
+        "employee_id": 61,
+        "product_id": 5,
+        "quantity": 5,
+        "order_date": "2023-08-11",
+        "amount": 7979.8
+      }
+    ]
+  }
+}

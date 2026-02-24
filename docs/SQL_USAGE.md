@@ -1,22 +1,26 @@
 # SQL 使用说明
 
-本项目中 SQL 在**沙箱内 SQLite** 执行，结果直接返回，不落盘。
+本项目中 SQL 在**沙箱内 MariaDB** 执行，采用**实例隔离**：每个沙箱由独立 MariaDB 容器 + 数据卷组成，创建/销毁见下文。
 
 ## 接口
 
+**POST /api/sandboxes** — 创建沙箱（启动独立 DB 容器并绑定数据卷），返回 `sandbox_id`。  
+**DELETE /api/sandboxes/{sandbox_id}** — 销毁沙箱（停止并删除 DB 容器与数据卷）。
+
 **POST /api/execute-sql**
 
-- **可选 ddl**：传 `ddl`（建表 DDL 文本，如 dbprofile.sql 内容）时，沙箱先执行 DDL 建表，再按 `tables` 仅插入数据（不自动建表），列类型由 DDL 决定。
-- **单表**：body 传 `data`（行数据数组）、`sql`，可选 `table_name`、`columns`；不传 ddl 时自动按 data 建表（全列 TEXT）。
-- **多表**：body 传 `tables`（`[{ "table_name": "xxx", "data": [...], "columns": [...]? }, ...]`）、`sql`；可同时传 `ddl` 做建表依据。
+- **sandbox_id**（必填）：由 `POST /api/sandboxes` 返回的沙箱 ID。
+- **可选 ddl**：传 `ddl`（建表 DDL，MariaDB 语法）时，先执行 DDL 建表，再按 `tables` 插入数据。
+- **单表**：传 `data`、`sql`，可选 `table_name`、`columns`；不传 ddl 时自动按 data 建表（VARCHAR(2000)）。
+- **多表**：传 `tables`、`sql`，可同时传 `ddl`。
 
-服务将请求转发给沙箱容器，沙箱在内存 SQLite 中建表、插入数据、执行 SQL，返回 `{"status": "success", "result": {"columns", "data", "row_count"}, "execution_time_ms"?}`。
+服务将请求转发给 runner 容器，runner 连接该沙箱的 MariaDB、创建临时 database、建表/插入/执行 SQL、返回结果后删除该 database，返回 `{"status": "success", "result": {"columns", "data", "row_count"}, "execution_time_ms"?}`。
 
 ## 示例：dbprofile.sql + CSV + query.sql
 
 `examples/run_sql_examples.py` 使用三类文件调用本接口：
 
-- **dbprofile.sql**：建表 DDL，作为建表依据（类型明确，如 INTEGER/REAL/TEXT）。
+- **dbprofile.sql**：建表 DDL（MariaDB 语法），作为建表依据（如 INT/VARCHAR/DOUBLE）。
 - **users.csv / orders.csv**：要插入的表数据。
 - **query.sql**：要执行的 SQL，多条语句用分号分隔。
 

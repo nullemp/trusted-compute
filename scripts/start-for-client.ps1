@@ -91,6 +91,14 @@ if (-not $runtime) {
 if ($addToPath) {
     $env:PATH = "$addToPath;$env:PATH"
 }
+# podman compose 会在 PATH 中查找 docker-compose；若使用 Podman 且 runtime/docker 下有 docker-compose.exe，加入 PATH
+if ($runtime -eq "podman") {
+    $ComposeDir = Join-Path $RuntimeRoot "docker"
+    $ComposeExe = Join-Path $ComposeDir "docker-compose.exe"
+    if (Test-Path $ComposeExe) {
+        $env:PATH = "$ComposeDir;$env:PATH"
+    }
+}
 
 if ($runtime -eq "podman") {
     # On Windows, Podman runs in a Linux VM (Podman Machine) and requires WSL. Auto-install WSL if missing.
@@ -128,6 +136,28 @@ if ($runtime -eq "podman") {
         Write-Host "If required images are not present locally, they will be fetched from the network. Please wait." -ForegroundColor Cyan
         "--build"
     }
+    # When using offline images, optionally skip sandbox rebuild (e.g. 内网不需要重建: set SKIP_SANDBOX_REBUILD=1).
+    $skipSandboxRebuild = $env:SKIP_SANDBOX_REBUILD -eq "1" -or $env:SKIP_SANDBOX_REBUILD -eq "true"
+    if ($usedOfflineImages -and -not $skipSandboxRebuild) {
+        Write-Host "Rebuilding sandbox image from source (backend/sandbox) so runner has latest code..." -ForegroundColor Cyan
+        $sandboxBuildOk = $false
+        cmd /c "cd /d `"$ProjectRoot`" && podman compose build sandbox"
+        if ($LASTEXITCODE -eq 0) { $sandboxBuildOk = $true }
+        if (-not $sandboxBuildOk -and (Get-Command podman-compose -ErrorAction SilentlyContinue)) {
+            cmd /c "cd /d `"$ProjectRoot`" && podman-compose build sandbox"
+            if ($LASTEXITCODE -eq 0) { $sandboxBuildOk = $true }
+        }
+        if (-not $sandboxBuildOk) {
+            $composeExePath = Ensure-DockerComposeForPodman
+            if ($composeExePath -and (Test-Path $composeExePath) -and ($composeExePath.Length -lt 260)) {
+                cmd /c "set `"DOCKER_HOST=npipe:////./pipe/docker_engine`" && set `"DOCKER_BUILDKIT=0`" && set `"COMPOSE_DOCKER_CLI_BUILD=0`" && set `"PYTHON_IMAGE=docker.m.daocloud.io/library/python:3.11-slim`" && cd /d `"$ProjectRoot`" && `"$composeExePath`" build sandbox"
+                if ($LASTEXITCODE -eq 0) { $sandboxBuildOk = $true }
+            }
+        }
+        if (-not $sandboxBuildOk) {
+            Write-Host "WARNING: Sandbox image build failed. SQL may fail with 'connect to mariadb'. Fix build (e.g. run from project root, check podman) and restart." -ForegroundColor Yellow
+        }
+    }
     # Prefer built-in "podman compose", then podman-compose, then docker-compose (works with Podman's Docker API)
     $composeOk = $false
     cmd /c "podman compose version 2>nul"
@@ -163,6 +193,17 @@ if ($runtime -eq "podman") {
     $composeBuildArg = if ($usedOfflineImages) { "--no-build" } else {
         Write-Host "If required images are not present locally, they will be fetched from the network. Please wait." -ForegroundColor Cyan
         "--build"
+    }
+    $skipSandboxRebuild = $env:SKIP_SANDBOX_REBUILD -eq "1" -or $env:SKIP_SANDBOX_REBUILD -eq "true"
+    if ($usedOfflineImages -and -not $skipSandboxRebuild) {
+        Write-Host "Rebuilding sandbox image from source (backend/sandbox) so runner has latest code..." -ForegroundColor Cyan
+        cmd /c "cd /d `"$ProjectRoot`" && docker compose build sandbox"
+        if ($LASTEXITCODE -ne 0) {
+            cmd /c "cd /d `"$ProjectRoot`" && docker-compose build sandbox"
+        }
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "WARNING: Sandbox image build failed. SQL may fail with 'connect to mariadb'. Fix build and restart." -ForegroundColor Yellow
+        }
     }
     cmd /c "docker compose version 2>nul"
     if ($LASTEXITCODE -eq 0) {

@@ -7,6 +7,8 @@ import subprocess
 import time
 from typing import Dict, Any, List, Optional
 
+from .sandbox_db_lifecycle import sandbox_db_host, sandbox_db_ip, sandbox_exists
+
 
 class SandboxService:
     def __init__(self):
@@ -24,32 +26,56 @@ class SandboxService:
             return "docker"  # backend image has docker CLI; host Podman often exposes docker.sock
         return requested
 
-    def _run_docker(self, stdin_bytes: bytes) -> subprocess.CompletedProcess:
+    def _run_docker(
+        self,
+        stdin_bytes: bytes,
+        *,
+        use_network: bool = False,
+        container_env: Optional[Dict[str, str]] = None,
+    ) -> subprocess.CompletedProcess:
         """Run in Docker/Podman container (host must have runtime and socket mounted)."""
         print(f"Sandbox: starting container image={self.sandbox_image} runtime={self.container_runtime}", flush=True)
+        cmd = [
+            self.container_runtime,
+            "run",
+            "--rm",
+            "-i",
+            self.sandbox_image,
+        ]
+        if use_network:
+            network = os.getenv("SANDBOX_NETWORK", "trusted-compute_default")
+            cmd.extend(["--network", network])
+        else:
+            cmd.extend(["--network", "none"])
+        if container_env:
+            for k, v in container_env.items():
+                cmd.extend(["-e", f"{k}={v}"])
+        run_timeout = int(os.getenv("SANDBOX_RUN_TIMEOUT", "120"))
         result = subprocess.run(
-            [
-                self.container_runtime,
-                "run",
-                "--rm",
-                "--network",
-                "none",
-                "-i",
-                self.sandbox_image,
-            ],
+            cmd,
             input=stdin_bytes,
             capture_output=True,
-            timeout=60,
+            timeout=run_timeout,
         )
         print(f"Sandbox: container finished exit_code={result.returncode}", flush=True)
         return result
 
-    def _run_payload(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+    def _run_payload(
+        self,
+        payload: Dict[str, Any],
+        *,
+        use_network: bool = False,
+        container_env: Optional[Dict[str, str]] = None,
+    ) -> Dict[str, Any]:
         """Run one payload in container: stdin JSON -> runner.py -> stdout JSON."""
         start = time.time()
         stdin_bytes = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         try:
-            proc = self._run_docker(stdin_bytes)
+            proc = self._run_docker(
+                stdin_bytes,
+                use_network=use_network,
+                container_env=container_env,
+            )
         except subprocess.TimeoutExpired:
             return {"status": "error", "error": "执行超时"}
         except FileNotFoundError:
@@ -77,6 +103,7 @@ class SandboxService:
     def execute_sql(
         self,
         *,
+        sandbox_id: str,
         sql: str,
         ddl: Optional[str] = None,
         data: Optional[list] = None,
@@ -85,11 +112,14 @@ class SandboxService:
         tables: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """
-        在沙箱内使用 SQLite 执行 SQL。
+        在指定沙箱的独立 MariaDB 中执行 SQL（实例隔离：每沙箱一库一卷）。
+        - sandbox_id: 由 POST /api/sandboxes 创建。
         - 可选 ddl: 先执行 DDL 建表，再按 tables 插入数据。
-        - 单表: 传 data/table_name/columns
-        - 多表: 传 tables=[{table_name, data, columns?}, ...]
+        - 单表: 传 data/table_name/columns；多表: 传 tables=[...]
         """
+        if not sandbox_exists(sandbox_id):
+            return {"status": "error", "error": f"沙箱不存在或已销毁: {sandbox_id}"}
+
         input_params: Dict[str, Any] = {}
         if ddl:
             input_params["ddl"] = ddl
@@ -100,13 +130,32 @@ class SandboxService:
             input_params["table_name"] = table_name
             if columns is not None:
                 input_params["columns"] = columns
+        # 通过 payload 传入 DB 连接。优先用容器 IP 避免 runner 与 DB 间容器名解析失败（如 Windows Podman）
+        root_password = os.getenv("MARIADB_ROOT_PASSWORD", "trusted_compute_root")
+        _host = sandbox_db_ip(sandbox_id) or sandbox_db_host(sandbox_id)
+        input_params["_mariadb"] = {
+            "host": _host,
+            "port": 3306,
+            "user": "root",
+            "password": root_password,
+        }
 
         payload = {
             "model_type": "sql",
             "model_code": sql,
             "input_params": input_params,
         }
-        return self._run_payload(payload)
+        mariadb_env = {
+            "MARIADB_HOST": _host,
+            "MARIADB_PORT": "3306",
+            "MARIADB_USER": "root",
+            "MARIADB_PASSWORD": root_password,
+        }
+        return self._run_payload(
+            payload,
+            use_network=True,
+            container_env=mariadb_env,
+        )
 
     def execute_python(self, *, code: str, input_params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """在沙箱内执行 Python 代码（pandas/numpy 可用）。"""

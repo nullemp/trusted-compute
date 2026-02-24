@@ -41,7 +41,7 @@
 
 1. 发现 `runtime/images/` 下存在 `.tar` 文件。
 2. 执行 `load` 加载镜像。
-3. 执行 `compose up -d --no-build`，**不再执行 build，不访问网络**。
+3. 若未设置 `SKIP_SANDBOX_REBUILD=1`，会尝试重建 sandbox 镜像（内网无网时会失败但不影响后续）；若**内网不需要重建 sandbox**，请设置环境变量 **`SKIP_SANDBOX_REBUILD=1`**（或 `true`），则仅执行 `compose up -d --no-build`，**不发起任何 build、不访问网络**。
 
 如需完全手动，可参考 [runtime/images/README.md](../runtime/images/README.md) 中的「内网环境：加载并启动」命令（内网统一使用 `podman`）。
 

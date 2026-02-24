@@ -51,6 +51,15 @@ if [[ -d "$IMAGES_DIR" ]]; then
 fi
 if [[ $USE_OFFLINE_IMAGES -eq 1 ]]; then
   COMPOSE_UP_ARGS="up -d --no-build"
+  # 内网不需要重建 sandbox 时设置 SKIP_SANDBOX_REBUILD=1，直接使用已加载的镜像，不发起任何 build/网络请求
+  if [[ "${SKIP_SANDBOX_REBUILD}" != "1" && "${SKIP_SANDBOX_REBUILD}" != "true" ]]; then
+    echo "Rebuilding sandbox image from source (backend/sandbox) so runner has latest code..."
+    if [[ "$RUNTIME" == "podman" ]]; then
+      (podman compose build sandbox 2>/dev/null) || (command -v podman-compose &>/dev/null && podman-compose build sandbox 2>/dev/null) || true
+    else
+      (docker compose build sandbox 2>/dev/null) || (docker-compose build sandbox 2>/dev/null) || true
+    fi
+  fi
 else
   echo "If required images are not present locally, they will be fetched from the network. Please wait."
   COMPOSE_UP_ARGS="up -d --build"

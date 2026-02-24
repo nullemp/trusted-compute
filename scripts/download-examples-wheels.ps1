@@ -36,6 +36,15 @@ if (-not $pythonExe) {
 }
 
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
-& $pythonExe -m pip download -r $Req -d $OutDir
+# 若系统设置了不可用的代理，pip 会报 ProxyError；此处临时取消代理，直连 PyPI
+$saveProxy = @{}
+foreach ($k in @("HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy", "ALL_PROXY", "all_proxy")) {
+    if (Test-Path "Env:$k") { $saveProxy[$k] = (Get-Item "Env:$k").Value; Remove-Item "Env:$k" -ErrorAction SilentlyContinue }
+}
+try {
+    & $pythonExe -m pip download -r $Req -d $OutDir
+} finally {
+    foreach ($k in $saveProxy.Keys) { Set-Item "Env:$k" $saveProxy[$k] -ErrorAction SilentlyContinue }
+}
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 Write-Host "Wheels saved to: $OutDir"

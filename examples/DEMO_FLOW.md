@@ -39,7 +39,7 @@
 | 3.1 | 接收 `POST /api/execute-sql`，解析为 `ExecuteSqlRequest`（含 `sql`、`ddl`、`tables`）。 |
 | 3.2 | 调用 `sandbox_service.execute_sql(sql=..., ddl=..., tables=...)`。 |
 | 3.3 | 构造传给沙箱的 payload：`{ "model_type": "sql", "model_code": sql, "input_params": { "ddl": ddl, "tables": tables } }`，用 UTF-8 序列化为 JSON。 |
-| 3.4 | 调用宿主上的容器运行时（如 `podman`）：`podman run --rm --network none -i trusted-compute-sandbox`，把上述 JSON 从**标准输入**传入容器。 |
+| 3.4 | 调用宿主上的容器运行时（如 `podman`）：`podman run --rm --network trusted-compute_default -i -e MARIADB_* trusted-compute-sandbox`，把上述 JSON 从**标准输入**传入容器，沙箱需连网访问 MariaDB。 |
 | 3.5 | 等待容器退出，从**标准输出**读 JSON，解析后加上 `execution_time_ms`，返回给客户端。 |
 
 ---
@@ -52,11 +52,11 @@
 |------|------|
 | 4.1 | 解析 JSON，得到 `model_type`、`model_code`（即本次要执行的 SQL）、`input_params`（含 `ddl`、`tables`）。 |
 | 4.2 | 因为 `model_type == "sql"`，进入 `run_sql(model_code, input_params)`。 |
-| 4.3 | 打开**内存 SQLite**：`conn = sqlite3.connect(":memory:")`（不落盘）。 |
-| 4.4 | **有 ddl**：先 `conn.executescript(ddl)`，按 dbprofile.sql 建表（如 `users`、`orders`，列类型 INTEGER/REAL/TEXT）；再按 `tables` 顺序对每张表只做 **INSERT**（`_insert_data_into_table`），不再次建表。 |
+| 4.3 | 连接 **MariaDB**，创建本请求专用 database：`CREATE DATABASE sandbox_<uuid>`，然后 `USE` 该库。 |
+| 4.4 | **有 ddl**：先执行 DDL（MariaDB 语法），建表（如 `users`、`orders`）；再按 `tables` 顺序对每张表只做 **INSERT**，不再次建表。 |
 | 4.5 | 执行用户 SQL：`cur.execute(sql)`，若是 SELECT 则 `fetchall()`，得到结果列名和行数据。 |
 | 4.6 | 组装结果：`{"status": "success", "type": "sql", "result": {"columns": [...], "data": [...], "row_count": N}}`，若有异常则 `{"status": "error", "error": "..."}`。 |
-| 4.7 | 将结果 JSON 打印到 **stdout**，进程退出。容器 `--rm`，退出后容器被删除，内存 SQLite 随之消失。 |
+| 4.7 | **DROP DATABASE** 删除本请求的临时库，将结果 JSON 打印到 **stdout**，进程退出。容器 `--rm`，退出后容器被删除。 |
 
 ---
 
@@ -81,11 +81,11 @@
     → sandbox_service.execute_sql()
     → podman run --rm -i trusted-compute-sandbox  < stdin(JSON)
 
-[ 沙箱容器 ]  runner.py 从 stdin 读 JSON
-    → executescript(ddl)  建表
-    → INSERT  users / orders  插入 CSV 数据
+[ 沙箱容器 ]  runner.py 从 stdin 读 JSON，连接 MariaDB
+    → CREATE DATABASE sandbox_<uuid>  → USE
+    → 执行 ddl 建表  → INSERT users / orders
     → execute(sql)  执行当前这条 query
-    → 结果 JSON 写 stdout → 容器退出并删除
+    → DROP DATABASE  → 结果 JSON 写 stdout → 容器退出并删除
 ```
 
 ---
@@ -94,5 +94,5 @@
 
 - **demo.py**：入口，只调 `run_sql_examples.main()`。
 - **run_sql_examples**：读 3 类文件（dbprofile.sql、CSV、query.sql），按「每条 query 一次请求」调用 `/api/execute-sql`，并打印结果。
-- **Backend**：转发请求到沙箱容器（stdin JSON → 容器内 runner.py）。
-- **沙箱**：内存 SQLite，先 DDL 建表、再按 tables 插入、再执行 sql，结果从 stdout 返回；容器退出后无持久化。
+- **Backend**：转发请求到沙箱容器（stdin JSON → 容器内 runner.py），SQL 请求时沙箱加入与 MariaDB 同一网络并传入连接信息。
+- **沙箱**：连接 MariaDB，每请求创建临时 database，DDL 建表、按 tables 插入、执行 sql，结果从 stdout 返回后删除该 database；容器退出后无持久化。
