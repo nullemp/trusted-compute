@@ -45,6 +45,20 @@
 
 如需完全手动，可参考 [runtime/images/README.md](../runtime/images/README.md) 中的「内网环境：加载并启动」命令（内网统一使用 `podman`）。
 
+### Windows 内网机：Podman 机器（podman-machine-default）首次创建需联网
+
+在 **Windows** 上，Podman 通过 WSL2 运行，会创建一个名为 **`podman-machine-default`** 的 WSL 发行版作为其 Linux 虚拟机。**首次**创建该机器时，Podman 会**联网下载**一个小型 Linux 镜像（如 Fedora CoreOS），用于该虚拟机的系统盘。
+
+因此：
+
+- **有外网**：第一次执行 `podman machine init` 或运行本项目的 `scripts\start-for-client.*` 触发创建时，会自动下载并创建，无需额外操作。
+- **完全离线/内网**：若内网机从未创建过 Podman 机器，且无法访问外网，首次创建会失败或卡在下载。可选做法：
+  - **推荐**：在**可联网的 Windows 机**上先执行一次 `podman machine init`（或运行一次启动脚本），让 Podman 完成下载并创建好 `podman-machine-default`，再将该 WSL 发行版/虚拟机磁盘拷贝到内网机（需按 WSL 导出/导入方式操作，或由 IT 提供已包含该机器的镜像）。
+  - 或使用**已捆绑 Podman 机器镜像的离线安装包**（若供应商提供）。
+  - 或由 IT 将 Podman 所需的机器镜像放到内网文件共享，并配置 Podman 使用该路径（具体以当前 Podman 文档为准）。
+
+内网 Windows 部署时若尚未创建过 Podman 机器，请提前在联网环境完成首次创建并迁移，或使用上述离线镜像方案。WSL 本身的离线安装见 [WSL_SETUP_WINDOWS.md](../WSL_SETUP_WINDOWS.md) 第 4 节。
+
 ## requirements.txt 与联网
 
 项目里有两类依赖，离线部署时都要考虑到：

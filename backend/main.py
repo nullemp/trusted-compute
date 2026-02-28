@@ -2,10 +2,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi import HTTPException, UploadFile, File, Form
 import os
 import uvicorn
-
-from fastapi import HTTPException
+import json
 
 from schemas import ExecuteSqlRequest, ExecutePythonRequest
 from services import sandbox_service
@@ -78,6 +78,64 @@ async def execute_python(req: ExecutePythonRequest):
         code=req.code,
         input_params=req.input_params,
     )
+
+
+@app.post("/api/python-from-files")
+async def execute_python_from_files(
+    data_file: UploadFile = File(
+        ...,
+        description=(
+            "数据文件，例如 enterprise_dump.json；"
+            "若按 SM4-CBC 加密，则为 [16 字节 IV] + [密文] 的原始字节流"
+        ),
+    ),
+    model_file: UploadFile = File(..., description="Python 计算模型脚本，例如 enterprise_aggregate_model.py"),
+    # 可选：对称加密场景下传入的明文密钥（例如 SM4-CBC），由 sandbox 内完成解密
+    key_hex: str | None = Form(
+        default=None,
+        description="可选：对称密钥（16 字节 hex 编码，表示 16 字节 key），存在时 data_file 视为加密后的原始字节流，由 sandbox 内完成解密",
+    ),
+):
+    """
+    从两个文件执行 Python 计算模型：
+    - data_file:
+        - 默认：JSON，通常与 enterprise_dump.json 结构一致（包含 data 字段）
+        - 如果同时提供 key_hex：视为加密后的原始字节流，格式为 [16 字节 IV] + [密文]，不在此处解析 JSON，而是透传给 sandbox
+    - model_file: Python 源码；在 sandbox 内执行，需在末尾设置 result 变量
+    - key_hex：可选，对称密钥（16 字节 hex 编码），由 sandbox 内代码自行完成解密（例如 SM4-CBC）
+    """
+    try:
+        raw = await data_file.read()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"读取 data_file 失败: {e}")
+    try:
+        code_bytes = await model_file.read()
+        code = code_bytes.decode("utf-8")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"读取 model_file 失败: {e}")
+
+    # 如果未提供对称密钥，保持向后兼容：按 JSON 解析并将 data 字段透传给 sandbox
+    if not key_hex:
+        try:
+            payload = json.loads(raw.decode("utf-8"))
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"解析 data_file 失败: {e}")
+
+        input_params = {
+            # 与 enterprise_dump.json 对齐：优先使用 data 字段；若不存在则直接传整个 JSON
+            "data": payload.get("data", payload),
+        }
+    else:
+        # 在沙箱内自行解密：此处不解析 JSON，仅将 [IV+密文] 和密钥作为参数传入
+        import base64
+
+        cipher_b64 = base64.b64encode(raw).decode("ascii")
+        input_params = {
+            "cipher_b64": cipher_b64,
+            "key_hex": key_hex,
+        }
+
+    return sandbox_service.execute_python(code=code, input_params=input_params)
 
 
 # 可选：挂载前端静态资源

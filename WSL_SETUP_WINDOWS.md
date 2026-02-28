@@ -98,7 +98,7 @@ ARM64（你如果是 Win11 ARM 必须用这个）：
 
 [https://aka.ms/wslubuntu2204arm64]()
 
-**Ubuntu 24.04 LTS								**
+**Ubuntu 24.04 LTS**
 
 x64: [https://aka.ms/wslubuntu2404]()
 
@@ -116,11 +116,14 @@ dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux 
 
 # 启用“虚拟机平台”（使用 WSL2 时强烈建议）
 dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
+
+#该命令可选执行
+wsl --set-default-version 2 
 ```
 
-完成后**重启**计算机。
+**完成后重启计算机**。
 
-#### 4.4 安装 WSL 内核更新（可选，推荐用于 WSL2）
+#### ~~4.4 安装 WSL 内核更新（可选，推荐用于 WSL2）~~
 
 若已下载 `Microsoft.WSL_<version>.msi`（或类似名称的 WSL 安装包），在目标机上以管理员身份运行该 MSI，按提示完成安装。若跳过此步，部分 Windows 版本会使用系统自带的 WSL 内核，可能较旧。
 
@@ -129,20 +132,20 @@ dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /nores
 将准备好的 Linux 发行版 `.appx` / `.msixbundle` 拷贝到目标机后，在**管理员 PowerShell** 中执行（路径请按实际修改）：
 
 ```powershell
-	# 示例：安装 Ubuntu 的 appxbundle（路径请替换为实际路径）
+# 示例：安装 Ubuntu 的 appxbundle（路径请替换为实际路径）
 Add-AppxPackage -Path "D:\WSL-Offline\CanonicalGroupLimited.Ubuntu22.04LTS_xxx.appxbundle"
 ```
 
 若企业策略禁止通过 `Add-AppxPackage` 安装，可尝试：
 
 - **解压后运行**：将 `.appxbundle` / `.msixbundle` 解压到某目录（可当作 zip 解压），进入该目录，运行其中的 `ubuntu.exe`（或对应发行版的启动器），完成首次注册与初始化。
-- 或由 IT 通过组策略/镜像预装该应用包。
+- ~~或由 IT 通过组策略/镜像预装该应用包~~。
 
 #### 4.6 首次启动与验证
 
 1. 从开始菜单或上述安装目录**启动已安装的 Linux 发行版**（如 Ubuntu）。
 2. 首次启动会进行初始化（创建用户等），按提示完成。
-3. 在 **cmd** 或 **PowerShell** 中执行：
+3.     
 
    ```powershell
    wsl -l -v
