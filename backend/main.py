@@ -8,7 +8,7 @@ import uvicorn
 import json
 import time
 import shutil
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from schemas import ExecuteSqlRequest, ExecutePythonRequest
 from services import sandbox_service
@@ -31,6 +31,92 @@ from services.sandbox_db_lifecycle import (
 )
 from sm4_utils import sm4_cbc_encrypt_py
 
+
+# #region agent log
+def _agent_debug_log(run_id: str, hypothesis_id: str, location: str, message: str, data: Dict[str, Any]) -> None:
+    """Debug logging for Cursor debug session 0268b0."""
+    try:
+        import time as _time
+
+        ts = int(_time.time() * 1000)
+        payload = {
+            "sessionId": "0268b0",
+            "id": f"log_{ts}",
+            "timestamp": ts,
+            "runId": run_id,
+            "hypothesisId": hypothesis_id,
+            "location": location,
+            "message": message,
+            "data": data,
+        }
+        log_path = os.path.join(os.path.dirname(__file__), "..", "debug-0268b0.log")
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(payload, ensure_ascii=False) + "\n")
+    except Exception:
+        # 调试日志失败时静默忽略，避免影响主流程
+        pass
+# #endregion
+
+
+def _sql_escape_identifier(name: str) -> str:
+    """简单转义 SQL 标识符（列名 / 表名），用反引号包裹并转义内部反引号。"""
+    safe = (name or "").replace("`", "``")
+    return f"`{safe}`"
+
+
+def _sql_escape_value(value: Any) -> str:
+    """
+    将 Python 值序列化为 SQL 字面量。
+    - None -> NULL
+    - 数字 -> 原样
+    - 其他 -> 单引号包裹，并转义内部单引号与反斜杠。
+    """
+    if value is None:
+        return "NULL"
+    if isinstance(value, (int, float)):
+        return str(value)
+    s = str(value)
+    s = s.replace("\\", "\\\\").replace("'", "\\'")
+    return f"'{s}'"
+
+
+def _result_to_sql_snippet(result_obj: Dict[str, Any], table_name: str = "result_table") -> str:
+    """
+    将 SQL 模型执行结果（columns + data）转换为一个可执行的 SQL 片段：
+    - 先 DROP TABLE IF EXISTS
+    - 再 CREATE TABLE（所有列使用 VARCHAR(2000)）
+    - 最后生成若干 INSERT 语句
+    """
+    if not isinstance(result_obj, dict):
+        raise ValueError("结果对象必须为 dict")
+    if result_obj.get("type") != "sql":
+        raise ValueError("仅支持将 SQL 模型结果转换为 SQL 片段")
+
+    inner = result_obj.get("result") or {}
+    columns: List[str] = inner.get("columns") or []
+    rows: List[List[Any]] = inner.get("data") or []
+
+    if not columns:
+        # 没有列名时，返回一个简单的注释，避免生成无法使用的 SQL
+        return "-- empty result (no columns)"
+
+    col_defs = ", ".join(f"{_sql_escape_identifier(c)} VARCHAR(2000)" for c in columns)
+    table_ident = _sql_escape_identifier(table_name or "result_table")
+
+    lines: List[str] = []
+    lines.append(f"DROP TABLE IF EXISTS {table_ident};")
+    lines.append(f"CREATE TABLE {table_ident} ({col_defs});")
+
+    if rows:
+        col_list = ", ".join(_sql_escape_identifier(c) for c in columns)
+        for row in rows:
+            # 对齐列数，多余忽略，不足补 NULL
+            padded = list(row[: len(columns)]) + [None] * max(0, len(columns) - len(row))
+            values = ", ".join(_sql_escape_value(v) for v in padded)
+            lines.append(f"INSERT INTO {table_ident} ({col_list}) VALUES ({values});")
+
+    return "\n".join(lines) + "\n"
+
 app = FastAPI(
     title="Trusted Compute Sandbox API",
     description="沙箱计算服务：SQL（MariaDB）与 Python 在沙箱内执行，结果直接返回。",
@@ -50,6 +136,26 @@ RESULTS_ROOT = os.getenv(
     "RESULTS_ROOT",
     os.path.join(os.path.dirname(__file__), "results"),
 )
+
+
+def _to_host_results_path(path: str) -> str:
+    """
+    将容器内的结果文件绝对路径（位于 RESULTS_ROOT 下）映射为宿主机上的绝对路径。
+    - RESULTS_HOST_ROOT 环境变量用于声明宿主机上与 RESULTS_ROOT 对应的目录（例如 D:\\...\\backend\\results）。
+    - 若未设置 RESULTS_HOST_ROOT 或映射失败，则原样返回 path。
+    """
+    host_root = os.getenv("RESULTS_HOST_ROOT")
+    if not host_root:
+        return path
+    try:
+        abs_path = os.path.abspath(path)
+        results_root_abs = os.path.abspath(RESULTS_ROOT)
+    except Exception:
+        return path
+    if not abs_path.startswith(results_root_abs):
+        return path
+    rel = os.path.relpath(abs_path, results_root_abs)
+    return os.path.join(host_root, rel)
 
 
 def _mariadb_connection_for_sandbox(db_sandbox_id: str):
@@ -95,7 +201,23 @@ def _encrypt_and_save_result(
         key = bytes.fromhex(key_hex.strip())
     except ValueError as e:
         raise ValueError(f"解析 key_hex 失败: {e}") from e
-    cipher_body = sm4_cbc_encrypt_py(key=key, iv=iv, data=json.dumps(result_obj, ensure_ascii=False).encode("utf-8"))
+    # SQL 沙箱优先使用 mysqldump 导出的结果 SQL（runner 已生成）
+    result_inner = {}
+    if isinstance(result_obj, dict):
+        result_inner = result_obj.get("result") or {}
+    sql_dump = None
+    if isinstance(result_inner, dict):
+        sql_dump = result_inner.get("sql_dump")
+    if sql_dump:
+        plaintext = sql_dump.encode("utf-8")
+    else:
+        # 回退：将结果表转换为简易 SQL 片段；若失败则直接写 JSON
+        try:
+            plaintext_sql = _result_to_sql_snippet(result_obj, table_name="result_table")
+            plaintext = plaintext_sql.encode("utf-8")
+        except Exception:
+            plaintext = json.dumps(result_obj, ensure_ascii=False).encode("utf-8")
+    cipher_body = sm4_cbc_encrypt_py(key=key, iv=iv, data=plaintext)
     cipher_all = iv + cipher_body
 
     sandbox_dir = os.path.join(RESULTS_ROOT, sandbox_id)
@@ -232,11 +354,21 @@ async def api_run_sandbox(
             cipher_b64=cipher_b64,
             key_hex=key_hex,
         )
+        _agent_debug_log(
+            run_id="pre-fix",
+            hypothesis_id="H1",
+            location="backend/main.py:api_run_sandbox/sql_after_execute",
+            message="execute_sql output",
+            data={"sandbox_id": sandbox_id, "out": out},
+        )
         if out.get("status") == "error":
             return {
+                "CMD": 82,
                 "status": 1,
-                "path": "",
-                "error": out.get("error", "执行失败"),
+                "params": {
+                    "result_path": "",
+                    "error": out.get("error", "执行失败"),
+                },
             }
         try:
             out_path = _encrypt_and_save_result(
@@ -245,17 +377,32 @@ async def api_run_sandbox(
                 data_content=data_content,
                 key_hex=key_hex,
             )
+            host_path = _to_host_results_path(out_path)
         except Exception as e:
+            _agent_debug_log(
+                run_id="pre-fix",
+                hypothesis_id="H2",
+                location="backend/main.py:api_run_sandbox/sql_encrypt_error",
+                message="encrypt_and_save_result failed",
+                data={"sandbox_id": sandbox_id, "error": str(e)},
+            )
             return {
+                "CMD": 82,
                 "status": 1,
-                "path": "",
-                "error": str(e),
+                "params": {
+                    "result_path": "",
+                    "error": str(e),
+                },
             }
         return {
+            "CMD": 82,
             "status": 0,
-            "path": out_path,
+            "params": {
+                "result_path": host_path,
+            },
         }
 
+    # 其余类型目前不支持 SQL + 导入一体化执行
     if not python_sandbox_exists(sandbox_id):
         return {
             "status": 1,
@@ -300,9 +447,12 @@ async def api_run_sandbox(
     )
     if out.get("status") == "error":
         return {
+            "CMD": 82,
             "status": 1,
-            "path": "",
-            "error": out.get("error", "执行失败"),
+            "params": {
+                "result_path": "",
+                "error": out.get("error", "执行失败"),
+            },
         }
     try:
         out_path = _encrypt_and_save_result(
@@ -311,15 +461,22 @@ async def api_run_sandbox(
             data_content=data_content,
             key_hex=key_hex,
         )
+        host_path = _to_host_results_path(out_path)
     except Exception as e:
         return {
+            "CMD": 82,
             "status": 1,
-            "path": "",
-            "error": str(e),
+            "params": {
+                "result_path": "",
+                "error": str(e),
+            },
         }
     return {
+        "CMD": 82,
         "status": 0,
-        "path": out_path,
+        "params": {
+            "result_path": host_path,
+        },
     }
 
 
@@ -357,6 +514,88 @@ async def api_destroy_sandbox(sandbox_id: str):
     return {
         "status": 0,
         "path": "",
+    }
+
+
+@app.post("/api/sandboxes/{sandbox_id}/import-and-run")
+async def api_import_and_run_sandbox(
+    sandbox_id: str,
+    data_file: UploadFile = File(..., description="加密数据文件（前 16 字节 IV + 密文），当前仅支持 SQL 沙箱"),
+    model_file: UploadFile | None = File(
+        None,
+        description=(
+            "SQL 计算脚本 .sql；可选。"
+            "当为空时，仅将 data_file 解密并整理为多张表导入 MariaDB，然后对整个 database 做 mysqldump 导出（不执行额外 SQL 运算）。"
+        ),
+    ),
+    key_hex: str = Form(..., description="明文密钥 16 字节 hex，与加密数据文件一致"),
+):
+    """
+    一步完成「导入 + 执行」的便捷接口（当前仅支持 SQL 沙箱）。
+    - 语义等价于先导入 data.bin + script.sql + key_hex 再在该 SQL 沙箱中执行一次 SQL，但不会在 workspace/sql_sandboxes/ 下持久化任何文件。
+    - 适合 SQL 场景的一次性计算：上传密文和脚本，直接得到加密结果文件路径。
+    """
+    if not sql_sandbox_exists(sandbox_id):
+        return {
+            "status": 1,
+            "sandbox_id": sandbox_id,
+            "path": "",
+            "error": "仅 SQL 沙箱支持 import-and-run；请先用 type=sql 创建沙箱",
+        }
+    # 1. 读取上传文件内容（完全在内存中处理，不再复制到 workspace/sql_sandboxes/）
+    try:
+        data_content = await data_file.read()
+    except Exception as e:
+        return {"status": 1, "sandbox_id": sandbox_id, "path": "", "error": f"读取 data_file 失败: {e}"}
+    sql_content = ""
+    if model_file is not None:
+        try:
+            sql_content = (await model_file.read()).decode("utf-8")
+        except Exception as e:
+            return {
+                "status": 1,
+                "sandbox_id": sandbox_id,
+                "path": "",
+                "error": f"读取 model_file 失败: {e}",
+            }
+
+    # 2. 在同一个 SQL 沙箱内执行一次计算（等价于 /run 的 SQL 分支，但直接复用内存中的 data_content/sql_content/key_hex，不写入 workspace）
+    import base64
+
+    cipher_b64 = base64.b64encode(data_content).decode("ascii")
+    out = sandbox_service.execute_sql(
+        sandbox_id=sandbox_id,
+        sql=sql_content,
+        cipher_b64=cipher_b64,
+        key_hex=key_hex,
+    )
+    if out.get("status") == "error":
+        return {
+            "status": 1,
+            "sandbox_id": sandbox_id,
+            "path": "",
+            "error": out.get("error", "执行失败"),
+        }
+    try:
+        out_path = _encrypt_and_save_result(
+            result_obj=out,
+            sandbox_id=sandbox_id,
+            data_content=data_content,
+            key_hex=key_hex,
+        )
+        host_path = _to_host_results_path(out_path)
+    except Exception as e:
+        return {
+            "status": 1,
+            "sandbox_id": sandbox_id,
+            "path": "",
+            "error": str(e),
+        }
+    return {
+        "status": 0,
+        "sandbox_id": sandbox_id,
+        "path": host_path,
+        "error": "",
     }
 
 

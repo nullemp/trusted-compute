@@ -3,4 +3,4 @@
 -- 单表时默认表名为 input_data；多表时按 tables[].table_name 建表。
 
 -- 示例 1：统计行数（表名为 input_data 时）
-SELECT COUNT(*) AS row_count FROM input_data;
+SELECT COUNT(*) AS row_count FROM employees;

@@ -1,54 +1,56 @@
-#!/usr/bin/env python3
-"""
-解密 backend/results/.../result_*.bin 文件，并打印明文 JSON。
-
-用法（PowerShell 示例）：
-  python decrypt_result.py ^
-    --file backend/results/da1478ef32c44a92/result_1772609557626.bin ^
-    --key 00112233445566778899AABBCCDDEEFF
-"""
-
-import argparse
-import json
 import os
 import sys
+import argparse
 
-# 复用 sandbox/runner.py 里的 SM4 解密实现
-sys.path.append(os.path.join(os.path.dirname(__file__), "backend"))
-from sandbox.runner import _sm4_cbc_decrypt_py  # type: ignore[attr-defined]
+# 确保项目根在 sys.path 里
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
+# 直接用 sandbox.runner 里的解密实现
+from backend.sandbox.runner import _sm4_cbc_decrypt_py as sm4_cbc_decrypt_py  # type: ignore
 
 
-def decrypt_file(path: str, key_hex: str) -> bytes:
-    with open(path, "rb") as f:
-        data = f.read()
-    if len(data) < 16:
-        raise ValueError("文件长度不足 16 字节，无法取 IV")
-    iv = data[:16]
-    cipher = data[16:]
+def decrypt_result_bin(result_path: str, key_hex: str, save_as: str | None = None) -> None:
     key = bytes.fromhex(key_hex.strip())
-    return _sm4_cbc_decrypt_py(key=key, iv=iv, data=cipher)
+
+    with open(result_path, "rb") as f:
+        raw = f.read()
+
+    if len(raw) <= 16:
+        raise ValueError("结果文件长度太短，缺少 IV 或密文")
+
+    iv = raw[:16]
+    cipher = raw[16:]
+
+    plaintext = sm4_cbc_decrypt_py(key, iv, cipher)
+    text = plaintext.decode("utf-8", errors="ignore")
+
+    if save_as:
+        out_path = os.path.abspath(save_as)
+        with open(out_path, "w", encoding="utf-8") as f:
+            f.write(text)
+        print(f"解密完成，已保存到: {out_path}")
+    else:
+        print(text)
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="解密 result_*.bin 并打印明文 JSON")
-    parser.add_argument("--file", required=True, help="result_*.bin 文件路径")
+    parser = argparse.ArgumentParser(description="解密 [IV+SM4-CBC密文] 文件为明文 SQL/JSON")
+    parser.add_argument("result_path", help="要解密的 .bin 文件路径（data.bin 或 result_xxx.bin）")
     parser.add_argument(
-        "--key",
-        required=True,
-        help="明文密钥（16 字节 hex，如 00112233445566778899AABBCCDDEEFF）",
+        "--key-hex",
+        default="00112233445566778899AABBCCDDEEFF",
+        help="16 字节密钥的 hex（32 个十六进制字符），默认与示例一致",
+    )
+    parser.add_argument(
+        "--out",
+        dest="save_as",
+        default=None,
+        help="可选：将明文保存到指定文件路径，不填则直接打印到控制台",
     )
     args = parser.parse_args()
-
-    plaintext = decrypt_file(args.file, args.key)
-    try:
-        obj = json.loads(plaintext.decode("utf-8"))
-        print(json.dumps(obj, ensure_ascii=False, indent=2))
-    except Exception:
-        # 不是 JSON 就直接以文本/十六进制形式输出
-        try:
-            print(plaintext.decode("utf-8", errors="replace"))
-        except Exception:
-            print(plaintext.hex())
+    decrypt_result_bin(args.result_path, args.key_hex, args.save_as)
 
 
 if __name__ == "__main__":

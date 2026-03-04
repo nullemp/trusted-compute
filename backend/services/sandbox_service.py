@@ -87,6 +87,29 @@ class SandboxService:
             return {"status": "error", "error": str(e)}
 
         if proc.returncode != 0:
+            # #region agent log
+            try:
+                ts = int(time.time() * 1000)
+                log_path = os.path.join(os.path.dirname(__file__), "..", "debug-0268b0.log")
+                payload = {
+                    "sessionId": "0268b0",
+                    "id": f"log_{ts}",
+                    "timestamp": ts,
+                    "runId": "pre-fix",
+                    "hypothesisId": "H3",
+                    "location": "backend/services/sandbox_service.py:_run_payload/nonzero_exit",
+                    "message": "runner container non-zero exit",
+                    "data": {
+                        "returncode": proc.returncode,
+                        "stdout": proc.stdout.decode("utf-8", errors="replace") if isinstance(proc.stdout, bytes) else str(proc.stdout),
+                        "stderr": proc.stderr.decode("utf-8", errors="replace") if isinstance(proc.stderr, bytes) else str(proc.stderr),
+                    },
+                }
+                with open(log_path, "a", encoding="utf-8") as f:
+                    f.write(json.dumps(payload, ensure_ascii=False) + "\n")
+            except Exception:
+                pass
+            # #endregion
             return {
                 "status": "error",
                 "error": (proc.stderr or proc.stdout or b"").decode("utf-8", errors="replace"),
@@ -95,6 +118,28 @@ class SandboxService:
         try:
             out = json.loads(proc.stdout.decode("utf-8"))
         except Exception as e:
+            # #region agent log
+            try:
+                ts = int(time.time() * 1000)
+                log_path = os.path.join(os.path.dirname(__file__), "..", "debug-0268b0.log")
+                payload = {
+                    "sessionId": "0268b0",
+                    "id": f"log_{ts}",
+                    "timestamp": ts,
+                    "runId": "pre-fix",
+                    "hypothesisId": "H4",
+                    "location": "backend/services/sandbox_service.py:_run_payload/json_error",
+                    "message": "failed to parse runner stdout as JSON",
+                    "data": {
+                        "error": str(e),
+                        "stdout_sample": proc.stdout[:500].decode("utf-8", errors="replace") if isinstance(proc.stdout, bytes) else str(proc.stdout)[:500],
+                    },
+                }
+                with open(log_path, "a", encoding="utf-8") as f:
+                    f.write(json.dumps(payload, ensure_ascii=False) + "\n")
+            except Exception:
+                pass
+            # #endregion
             return {"status": "error", "error": f"解析输出失败: {e}"}
 
         out["execution_time_ms"] = int((time.time() - start) * 1000)

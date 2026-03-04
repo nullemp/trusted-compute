@@ -1,7 +1,7 @@
 """
 Sandbox entry: read JSON from stdin (model_type, model_code, input_params), run, output JSON to stdout.
 - model_type=python: run Python script (pandas/numpy)，支持在沙箱内用纯 Python 实现的 SM4-CBC 解密大文件。
-- model_type=sql: run SQL in sandbox using MariaDB (one DB per run; data in input_params).
+- model_type=sql: run SQL in sandbox using MariaDB (one DB per run; data in input_params)。
 """
 import os
 import sys
@@ -9,6 +9,7 @@ import json
 import uuid
 import base64
 import binascii
+import subprocess
 
 # SQL 模式使用 PyMySQL 连接 MariaDB
 try:
@@ -330,9 +331,39 @@ def _maybe_decrypt_sm4_from_input_params(input_params: dict) -> dict:
     except Exception as e:
         raise ValueError(f"解密后解析 JSON 失败: {e}") from e
 
-    # 与 enterprise_dump.json 对齐：优先使用 data 字段；若不存在则直接传整个 JSON
+    # 与 enterprise_dump.json 对齐：优先使用 data 字段；若不存在则直接传整个 JSON。
+    # 兼容两类结构：
+    # - 新格式：payload 已经包含 ddl/tables，可直接透传；
+    # - 老格式：payload.data + payload.schema（每张表一条 DDL），此时自动生成 ddl + tables，
+    #   让后续走「先执行 DDL 再用 _insert_data_into_table 插入」，从而保留原始列类型（INT/DOUBLE 等）。
     input_params = dict(input_params)
-    input_params["data"] = payload.get("data", payload)
+    data_obj = payload.get("data", payload)
+    input_params["data"] = data_obj
+
+    # 若 payload 已经带有 ddl/tables 等高级字段，直接透传
+    for k in ("ddl", "tables", "table_name", "columns"):
+        if k in payload:
+            input_params[k] = payload[k]
+
+    # 兼容 enterprise_dump.json: schema + data（data 是 {table_name: rows, ...}）
+    schema_obj = payload.get("schema")
+    if schema_obj and isinstance(schema_obj, dict) and isinstance(data_obj, dict):
+        # 1) 把每张表的 DDL 拼接成一段 ddl 文本
+        ddl_parts = []
+        for _name, _ddl in schema_obj.items():
+            if isinstance(_ddl, str) and _ddl.strip():
+                ddl_parts.append(_ddl.strip().rstrip(";"))
+        if ddl_parts:
+            input_params["ddl"] = ";\n".join(ddl_parts) + ";"
+        # 2) 把 data 里的 {table_name: rows} 转成 tables=[{table_name, data}, ...]
+        tables = []
+        for _tbl_name, _rows in data_obj.items():
+            if isinstance(_rows, list):
+                tables.append({"table_name": _tbl_name, "data": _rows})
+        if tables:
+            input_params["tables"] = tables
+            input_params.pop("data", None)
+
     return input_params
 
 
@@ -379,6 +410,19 @@ def run_sql(sql: str, input_params: dict) -> dict:
             for k in ("ddl", "tables", "table_name", "columns", "data"):
                 if k in decrypted:
                     input_params[k] = decrypted[k]
+
+    # 若解密后的 data 仍是 {table_name: rows, ...} 结构（如 enterprise_dump.json 的 data 字段），
+    # 自动转换为多表模式的 tables=[{table_name, data}, ...]，避免后续按「单表 list」处理时报 KeyError: 0。
+    if input_params.get("tables") is None:
+        _data_for_tables = input_params.get("data")
+        if isinstance(_data_for_tables, dict):
+            _tables = []
+            for _tbl_name, _rows in _data_for_tables.items():
+                if isinstance(_rows, list):
+                    _tables.append({"table_name": _tbl_name, "data": _rows})
+            if _tables:
+                input_params["tables"] = _tables
+                input_params.pop("data", None)
 
     tables = input_params.get("tables")
     data = input_params.get("data")
@@ -433,6 +477,70 @@ def run_sql(sql: str, input_params: dict) -> dict:
                 columns_in=input_params.get("columns"),
             )
 
+        # 若未提供 SQL（model_file 为空），仅将数据整理为表导入 MariaDB，
+        # 然后对整个 database 执行 mysqldump 导出所有表，不做额外运算。
+        if not (sql and sql.strip()) and not sql_only:
+            sql_dump = None
+            try:
+                conn.commit()
+                host = conn_params.get("host") if conn_params else os.getenv("MARIADB_HOST", "mariadb")
+                port = int(conn_params.get("port")) if conn_params and conn_params.get("port") else int(os.getenv("MARIADB_PORT", "3306"))
+                user = conn_params.get("user") if conn_params else os.getenv("MARIADB_USER", "root")
+                password = conn_params.get("password") if conn_params else os.getenv("MARIADB_PASSWORD", "")
+                dump_cmd = [
+                    "mysqldump",
+                    f"-h{host}",
+                    f"-P{port}",
+                    f"-u{user}",
+                    f"-p{password}",
+                    "--skip-comments",
+                    "--skip-set-charset",
+                    "--skip-ssl",
+                    db_name,
+                ]
+                try:
+                    proc = subprocess.run(
+                        dump_cmd,
+                        capture_output=True,
+                        text=True,
+                        timeout=60,
+                    )
+                    if proc.returncode == 0:
+                        sql_dump = proc.stdout
+                    else:
+                        # 将 mysqldump 的错误输出包装进异常，方便宿主侧诊断
+                        err_out = (proc.stderr or proc.stdout or "").strip()
+                        raise RuntimeError(f"mysqldump exited with code {proc.returncode}: {err_out}")
+                except FileNotFoundError as e:
+                    raise RuntimeError(f"mysqldump not found in sandbox image: {e}") from e
+                except Exception as e:
+                    raise RuntimeError(f"mysqldump failed: {e}") from e
+            except Exception:
+                # 统一在下方抛出，避免重复清理逻辑
+                raise
+
+            cur.close()
+            conn.close()
+            conn = None
+
+            # 删除本请求的 database
+            conn_drop = _get_mariadb_connection(db_name=None, conn_params=conn_params)
+            cur_drop = conn_drop.cursor()
+            cur_drop.execute(f"DROP DATABASE IF EXISTS `{db_name}`")
+            cur_drop.close()
+            conn_drop.close()
+
+            return {
+                "status": "success",
+                "type": "sql",
+                "result": {
+                    "columns": [],
+                    "data": [],
+                    "row_count": 0,
+                    "sql_dump": sql_dump,
+                },
+            }
+
         # 执行 sql 中的语句；若多条则取第一条有结果集的
         statements = [s.strip() for s in sql.strip().split(";") if s.strip()]
         result_columns = None
@@ -447,6 +555,64 @@ def run_sql(sql: str, input_params: dict) -> dict:
                 row_count = len(result_rows)
                 break
             row_count = cur.rowcount
+        # 若有结果集，则在数据库内创建一张结果表，并用 mysqldump 导出
+        sql_dump = None
+        if result_columns is not None:
+            try:
+                result_table = "_tc_result_"
+                # 优先使用 CREATE TABLE ... AS <原始 SELECT>，减少 Python 层搬运
+                simple_select = len(statements) == 1
+                first_stmt = statements[0] if statements else ""
+                upper_stmt = first_stmt.lstrip().upper()
+                cur.execute(f"DROP TABLE IF EXISTS `{result_table}`")
+                if simple_select and upper_stmt.startswith("SELECT") and " INTO " not in upper_stmt:
+                    # 仅一条纯 SELECT 语句时，直接用 CTAS 生成结果表
+                    cur.execute(f"CREATE TABLE `{result_table}` AS {first_stmt}")
+                else:
+                    # 其他复杂情况仍回退为手动建表 + INSERT
+                    cols_def = ", ".join(f"`{c}` VARCHAR(2000)" for c in result_columns)
+                    cur.execute(f"CREATE TABLE `{result_table}` ({cols_def})")
+                    if result_rows:
+                        placeholders = ", ".join(["%s"] * len(result_columns))
+                        col_list = ", ".join(f"`{c}`" for c in result_columns)
+                        insert_sql = f"INSERT INTO `{result_table}` ({col_list}) VALUES ({placeholders})"
+                        for row in result_rows:
+                            cur.execute(insert_sql, [str(v) if v is not None else None for v in row])
+                conn.commit()
+                # 使用 mysqldump 通过 TCP 导出该结果表（格式与 MariaDB dump 完全一致）
+                host = conn_params.get("host") if conn_params else os.getenv("MARIADB_HOST", "mariadb")
+                port = int(conn_params.get("port")) if conn_params and conn_params.get("port") else int(os.getenv("MARIADB_PORT", "3306"))
+                user = conn_params.get("user") if conn_params else os.getenv("MARIADB_USER", "root")
+                password = conn_params.get("password") if conn_params else os.getenv("MARIADB_PASSWORD", "")
+                dump_cmd = [
+                    "mysqldump",
+                    f"-h{host}",
+                    f"-P{port}",
+                    f"-u{user}",
+                    f"-p{password}",
+                    "--skip-comments",
+                    "--skip-set-charset",
+                    "--skip-ssl",
+                    db_name,
+                    result_table,
+                ]
+                try:
+                    proc = subprocess.run(
+                        dump_cmd,
+                        capture_output=True,
+                        text=True,
+                        timeout=60,
+                    )
+                    if proc.returncode == 0:
+                        sql_dump = proc.stdout
+                    # 非 0 时保持 sql_dump 为 None，由上层按 JSON 回退处理
+                except FileNotFoundError:
+                    # 宿主镜像未安装 mysqldump 时，保持 sql_dump 为 None，由调用方回退为 JSON
+                    sql_dump = None
+                except Exception:
+                    sql_dump = None
+            except Exception:
+                sql_dump = None
 
         cur.close()
         conn.close()
@@ -460,7 +626,7 @@ def run_sql(sql: str, input_params: dict) -> dict:
         conn_drop.close()
 
         if result_columns is not None:
-            return {
+            result_payload = {
                 "status": "success",
                 "type": "sql",
                 "result": {
@@ -469,6 +635,9 @@ def run_sql(sql: str, input_params: dict) -> dict:
                     "row_count": row_count,
                 },
             }
+            if sql_dump is not None:
+                result_payload["result"]["sql_dump"] = sql_dump
+            return result_payload
         return {
             "status": "success",
             "type": "sql",
@@ -488,7 +657,11 @@ def run_sql(sql: str, input_params: dict) -> dict:
             _conn.close()
         except Exception:
             pass
-        return {"status": "error", "error": str(e)}
+        # 返回更详细的错误信息，便于在宿主侧诊断（避免仅看到 "0"）
+        return {
+            "status": "error",
+            "error": f"{type(e).__name__}: {e}",
+        }
     finally:
         try:
             _conn = _get_mariadb_connection(db_name=None, conn_params=conn_params)

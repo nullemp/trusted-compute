@@ -5,6 +5,10 @@ $ErrorActionPreference = "Stop"
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $ProjectRoot
 
+# 结果文件在容器内位于 backend/main.py 默认的 RESULTS_ROOT（backend/results）下；
+# 将宿主机上的对应目录通过 RESULTS_HOST_ROOT 传给后端，便于直接返回宿主机绝对路径。
+$env:RESULTS_HOST_ROOT = Join-Path $ProjectRoot "backend\results"
+
 function Test-WslReady {
     # 1) If "wsl -e echo 0" works, WSL can run commands (distro is usable) -> ready
     $null = cmd /c "wsl -e echo 0 2>nul"
