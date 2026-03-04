@@ -364,12 +364,21 @@ def _create_table_from_data(cur, table_name: str, data, columns_in=None):
 def run_sql(sql: str, input_params: dict) -> dict:
     """
     在沙箱内用 MariaDB 执行 SQL：每请求创建独立 database，执行后删除。
+    - 若提供 cipher_b64 + key_hex：先 SM4-CBC 解密（密文前 16 字节为 IV），解析 JSON 得到 ddl/tables/data，再建表插入并执行 sql。
     - 若提供 ddl：先执行 DDL 建表，再按 tables 仅插入数据；否则按 data/tables 自动建表+插入。
     - 单表：input_params 包含 data, table_name, columns
     - 多表：input_params 包含 tables=[{table_name, data, columns?}, ...]
     """
     if not pymysql:
         return {"status": "error", "error": "未安装 pymysql，无法连接 MariaDB"}
+
+    if "cipher_b64" in input_params:
+        input_params = _maybe_decrypt_sm4_from_input_params(input_params)
+        decrypted = input_params.get("data")
+        if isinstance(decrypted, dict):
+            for k in ("ddl", "tables", "table_name", "columns", "data"):
+                if k in decrypted:
+                    input_params[k] = decrypted[k]
 
     tables = input_params.get("tables")
     data = input_params.get("data")

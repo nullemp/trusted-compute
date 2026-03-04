@@ -1,15 +1,25 @@
 """
 实例隔离：每个沙箱一个独立 MariaDB 容器 + 数据卷，销毁时删除容器与卷。
+Python 沙箱：每个沙箱一个工作目录，用于存放导入的数据/模型/密钥，销毁时删除目录。
 """
 import os
 import subprocess
 import time
 import uuid
+import shutil
 from typing import Optional, Tuple
 
 # 容器名与卷名前缀，便于过滤与清理
 SANDBOX_DB_PREFIX = "tc-sandbox-db-"
 SANDBOX_VOLUME_PREFIX = "tc-sandbox-data-"
+
+# Python 沙箱工作目录根。默认放在 backend 下，这样容器挂载 ./backend:/app 时宿主机可见；
+# 可通过环境变量 PYTHON_SANDBOX_WORKSPACE 覆盖（如项目根下的 workspace/python_sandboxes）。
+def _python_sandbox_root() -> str:
+    default = os.path.join(os.path.dirname(__file__), "..", "workspace", "python_sandboxes")
+    root = os.getenv("PYTHON_SANDBOX_WORKSPACE", default)
+    os.makedirs(root, exist_ok=True)
+    return root
 
 
 def _get_runtime() -> str:
@@ -71,12 +81,11 @@ def _wait_mariadb_ready(host: str, port: int, user: str, password: str, max_wait
     return False
 
 
-def create_sandbox() -> Tuple[Optional[str], Optional[str]]:
+def _create_mariadb_container(sandbox_id: str) -> Tuple[bool, str]:
     """
-    为沙箱启动独立 MariaDB 容器并绑定数据卷。
-    返回 (sandbox_id, error_message)。成功时 error_message 为 None。
+    为给定 sandbox_id 创建 MariaDB 容器与数据卷（不生成 id）。
+    返回 (成功, 错误信息)。成功时错误信息为空字符串。
     """
-    sandbox_id = uuid.uuid4().hex[:16]
     container = _container_name(sandbox_id)
     volume = _volume_name(sandbox_id)
     runtime = _get_runtime()
@@ -84,12 +93,10 @@ def create_sandbox() -> Tuple[Optional[str], Optional[str]]:
     root_password = os.getenv("MARIADB_ROOT_PASSWORD", "trusted_compute_root")
     image = os.getenv("MARIADB_IMAGE", "docker.io/library/mariadb:11.2")
 
-    # 先创建卷（显式创建便于 destroy 时精确删除）
     ok, out = _run([runtime, "volume", "create", volume], timeout=10)
     if not ok:
-        return None, f"创建卷失败: {out}"
+        return False, f"创建卷失败: {out}"
 
-    # 启动容器：数据目录绑定到该卷
     cmd = [
         runtime,
         "run",
@@ -104,15 +111,26 @@ def create_sandbox() -> Tuple[Optional[str], Optional[str]]:
     ok, out = _run(cmd, timeout=120)
     if not ok:
         _run([runtime, "volume", "rm", volume], timeout=5)
-        return None, f"启动 DB 容器失败: {out}"
+        return False, f"启动 DB 容器失败: {out}"
 
-    # 等待 MariaDB 就绪（同一网络下 host 为容器名）
     if not _wait_mariadb_ready(container, 3306, "root", root_password):
         _run([runtime, "stop", container], timeout=15)
         _run([runtime, "rm", container], timeout=10)
         _run([runtime, "volume", "rm", volume], timeout=5)
-        return None, "MariaDB 启动超时"
+        return False, "MariaDB 启动超时"
 
+    return True, ""
+
+
+def create_sandbox() -> Tuple[Optional[str], Optional[str]]:
+    """
+    为沙箱启动独立 MariaDB 容器并绑定数据卷。
+    返回 (sandbox_id, error_message)。成功时 error_message 为 None。
+    """
+    sandbox_id = uuid.uuid4().hex[:16]
+    ok, err = _create_mariadb_container(sandbox_id)
+    if not ok:
+        return None, err
     return sandbox_id, None
 
 
@@ -166,3 +184,231 @@ def sandbox_exists(sandbox_id: str) -> bool:
     container = _container_name(sandbox_id)
     ok, out = _run([runtime, "ps", "-q", "--filter", f"name=^{container}$"], timeout=5)
     return ok and bool(out.strip())
+
+
+# ---------- Python 沙箱（创建 / 导入 / 销毁） ----------
+
+def create_python_sandbox() -> Tuple[Optional[str], Optional[str]]:
+    """
+    创建 Python 沙箱：分配 sandbox_id、创建工作目录，并在同一 id 下启动专属 MariaDB 容器。
+    即 Python 沙箱「内部」包含一个 MariaDB，模型可通过 input_params["_mariadb"] 连库。
+    返回 (sandbox_id, error_message)。成功时 error_message 为 None。
+    """
+    sandbox_id = uuid.uuid4().hex[:16]
+    root = _python_sandbox_root()
+    path = os.path.join(root, sandbox_id)
+    try:
+        os.makedirs(path, exist_ok=False)
+    except FileExistsError:
+        return None, "沙箱 ID 冲突，请重试"
+    except Exception as e:
+        return None, str(e)
+    meta = os.path.join(path, ".type")
+    try:
+        with open(meta, "w", encoding="utf-8") as f:
+            f.write("python")
+    except Exception as e:
+        shutil.rmtree(path, ignore_errors=True)
+        return None, str(e)
+
+    ok, err = _create_mariadb_container(sandbox_id)
+    if not ok:
+        shutil.rmtree(path, ignore_errors=True)
+        return None, err
+
+    return sandbox_id, None
+
+
+def python_sandbox_exists(sandbox_id: str) -> bool:
+    """检查 Python 沙箱是否存在（工作目录存在且为 python 类型）。"""
+    root = _python_sandbox_root()
+    path = os.path.join(root, sandbox_id)
+    return os.path.isdir(path) and os.path.isfile(os.path.join(path, ".type"))
+
+
+def get_python_sandbox_dir(sandbox_id: str) -> Optional[str]:
+    """返回 Python 沙箱工作目录路径；若不存在则返回 None。"""
+    if not python_sandbox_exists(sandbox_id):
+        return None
+    return os.path.join(_python_sandbox_root(), sandbox_id)
+
+
+def import_python_sandbox(
+    sandbox_id: str,
+    data_content: bytes,
+    model_content: str,
+    key_hex: str,
+) -> Tuple[bool, str]:
+    """
+    向 Python 沙箱导入：将数据文件、模型脚本、密钥写入沙箱工作目录。
+    返回 (成功, 错误信息)。
+    """
+    path = get_python_sandbox_dir(sandbox_id)
+    if not path:
+        return False, "沙箱不存在或已销毁"
+    try:
+        with open(os.path.join(path, "data.bin"), "wb") as f:
+            f.write(data_content)
+        with open(os.path.join(path, "model.py"), "w", encoding="utf-8") as f:
+            f.write(model_content)
+        with open(os.path.join(path, "key_hex.txt"), "w", encoding="utf-8") as f:
+            f.write(key_hex.strip())
+        return True, ""
+    except Exception as e:
+        return False, str(e)
+
+
+def destroy_python_sandbox(sandbox_id: str) -> Tuple[bool, str]:
+    """
+    销毁 Python 沙箱：先删除该沙箱专属的 MariaDB 容器与卷，再删除工作目录。
+    返回 (成功, 错误信息)。
+    """
+    root = _python_sandbox_root()
+    path = os.path.join(root, sandbox_id)
+    if not os.path.isdir(path):
+        return False, "沙箱不存在或已销毁"
+    type_file = os.path.join(path, ".type")
+    if not os.path.isfile(type_file):
+        return False, "非 Python 沙箱或目录已损坏"
+
+    # 先销毁同 id 的 MariaDB 容器与卷（Python 沙箱创建时一并创建）
+    destroy_sandbox(sandbox_id)
+
+    try:
+        shutil.rmtree(path)
+        return True, ""
+    except Exception as e:
+        return False, str(e)
+
+
+# ---------- SQL 沙箱（创建 / 导入 / 销毁，与 Python 沙箱同构） ----------
+
+def create_sql_sandbox() -> Tuple[Optional[str], Optional[str]]:
+    """
+    创建 SQL 沙箱：分配 sandbox_id、创建工作目录，并在同一 id 下启动专属 MariaDB 容器。
+    导入 SQL 脚本后可通过 run 在该库内执行。
+    返回 (sandbox_id, error_message)。成功时 error_message 为 None。
+    """
+    sandbox_id = uuid.uuid4().hex[:16]
+    root = _python_sandbox_root()
+    path = os.path.join(root, sandbox_id)
+    try:
+        os.makedirs(path, exist_ok=False)
+    except FileExistsError:
+        return None, "沙箱 ID 冲突，请重试"
+    except Exception as e:
+        return None, str(e)
+    meta = os.path.join(path, ".type")
+    try:
+        with open(meta, "w", encoding="utf-8") as f:
+            f.write("sql")
+    except Exception as e:
+        shutil.rmtree(path, ignore_errors=True)
+        return None, str(e)
+
+    ok, err = _create_mariadb_container(sandbox_id)
+    if not ok:
+        shutil.rmtree(path, ignore_errors=True)
+        return None, err
+
+    return sandbox_id, None
+
+
+def sql_sandbox_exists(sandbox_id: str) -> bool:
+    """检查 SQL 沙箱是否存在（工作目录存在且 .type 为 sql）。"""
+    root = _python_sandbox_root()
+    path = os.path.join(root, sandbox_id)
+    if not os.path.isdir(path):
+        return False
+    type_path = os.path.join(path, ".type")
+    try:
+        with open(type_path, "r", encoding="utf-8") as f:
+            return f.read().strip() == "sql"
+    except Exception:
+        return False
+
+
+def get_sql_sandbox_dir(sandbox_id: str) -> Optional[str]:
+    """返回 SQL 沙箱工作目录路径；若不存在则返回 None。"""
+    if not sql_sandbox_exists(sandbox_id):
+        return None
+    return os.path.join(_python_sandbox_root(), sandbox_id)
+
+
+def import_sql_sandbox(
+    sandbox_id: str,
+    data_content: bytes,
+    sql_content: str,
+    key_hex: str,
+) -> Tuple[bool, str]:
+    """
+    向 SQL 沙箱导入：加密数据文件（前 16 字节为 IV）、SQL 计算模型脚本、明文密钥，
+    写入沙箱工作目录（data.bin、script.sql、key_hex.txt）。
+    返回 (成功, 错误信息)。
+    """
+    path = get_sql_sandbox_dir(sandbox_id)
+    if not path:
+        return False, "沙箱不存在或已销毁"
+    try:
+        with open(os.path.join(path, "data.bin"), "wb") as f:
+            f.write(data_content)
+            f.flush()
+            if hasattr(os, "fsync"):
+                try:
+                    os.fsync(f.fileno())
+                except (AttributeError, OSError):
+                    pass
+        script_path = os.path.join(path, "script.sql")
+        with open(script_path, "w", encoding="utf-8") as f:
+            f.write(sql_content)
+            f.flush()
+            if hasattr(os, "fsync"):
+                try:
+                    os.fsync(f.fileno())
+                except (AttributeError, OSError):
+                    pass
+        # 同时写入 model.py，与 Python 沙箱一致（表单均为 model_file），run 时 script.sql 优先
+        with open(os.path.join(path, "model.py"), "w", encoding="utf-8") as f:
+            f.write(sql_content)
+            f.flush()
+            if hasattr(os, "fsync"):
+                try:
+                    os.fsync(f.fileno())
+                except (AttributeError, OSError):
+                    pass
+        with open(os.path.join(path, "key_hex.txt"), "w", encoding="utf-8") as f:
+            f.write(key_hex.strip())
+            f.flush()
+            if hasattr(os, "fsync"):
+                try:
+                    os.fsync(f.fileno())
+                except (AttributeError, OSError):
+                    pass
+        return True, ""
+    except Exception as e:
+        return False, str(e)
+
+
+def destroy_sql_sandbox(sandbox_id: str) -> Tuple[bool, str]:
+    """
+    销毁 SQL 沙箱：先删除该沙箱专属的 MariaDB 容器与卷，再删除工作目录。
+    返回 (成功, 错误信息)。
+    """
+    root = _python_sandbox_root()
+    path = os.path.join(root, sandbox_id)
+    if not os.path.isdir(path):
+        return False, "沙箱不存在或已销毁"
+    type_file = os.path.join(path, ".type")
+    try:
+        with open(type_file, "r", encoding="utf-8") as f:
+            if f.read().strip() != "sql":
+                return False, "非 SQL 沙箱或目录已损坏"
+    except Exception:
+        return False, "非 SQL 沙箱或目录已损坏"
+
+    destroy_sandbox(sandbox_id)
+    try:
+        shutil.rmtree(path)
+        return True, ""
+    except Exception as e:
+        return False, str(e)

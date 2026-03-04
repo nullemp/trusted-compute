@@ -110,10 +110,13 @@ class SandboxService:
         table_name: str = "input_data",
         columns: Optional[List] = None,
         tables: Optional[List[Dict[str, Any]]] = None,
+        cipher_b64: Optional[str] = None,
+        key_hex: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         在指定沙箱的独立 MariaDB 中执行 SQL（实例隔离：每沙箱一库一卷）。
         - sandbox_id: 由 POST /api/sandboxes 创建。
+        - 可选 cipher_b64 + key_hex：密文（base64），前 16 字节为 IV，在 runner 内 SM4-CBC 解密后按 JSON 的 ddl/tables/data 加载再执行 sql。
         - 可选 ddl: 先执行 DDL 建表，再按 tables 插入数据。
         - 单表: 传 data/table_name/columns；多表: 传 tables=[...]
         """
@@ -121,15 +124,19 @@ class SandboxService:
             return {"status": "error", "error": f"沙箱不存在或已销毁: {sandbox_id}"}
 
         input_params: Dict[str, Any] = {}
-        if ddl:
-            input_params["ddl"] = ddl
-        if tables is not None:
-            input_params["tables"] = tables
+        if cipher_b64 is not None and key_hex is not None:
+            input_params["cipher_b64"] = cipher_b64
+            input_params["key_hex"] = key_hex
         else:
-            input_params["data"] = data or []
-            input_params["table_name"] = table_name
-            if columns is not None:
-                input_params["columns"] = columns
+            if ddl:
+                input_params["ddl"] = ddl
+            if tables is not None:
+                input_params["tables"] = tables
+            else:
+                input_params["data"] = data or []
+                input_params["table_name"] = table_name
+                if columns is not None:
+                    input_params["columns"] = columns
         # 通过 payload 传入 DB 连接。优先用容器 IP 避免 runner 与 DB 间容器名解析失败（如 Windows Podman）
         root_password = os.getenv("MARIADB_ROOT_PASSWORD", "trusted_compute_root")
         _host = sandbox_db_ip(sandbox_id) or sandbox_db_host(sandbox_id)
@@ -157,12 +164,27 @@ class SandboxService:
             container_env=mariadb_env,
         )
 
-    def execute_python(self, *, code: str, input_params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """在沙箱内执行 Python 代码（pandas/numpy 可用）。"""
+    def execute_python(
+        self,
+        *,
+        code: str,
+        input_params: Optional[Dict[str, Any]] = None,
+        use_network: bool = False,
+        container_env: Optional[Dict[str, str]] = None,
+    ) -> Dict[str, Any]:
+        """
+        在沙箱内执行 Python 代码（pandas/numpy 可用）。
+        当模型需要连库时，由调用方传入 use_network=True 和 container_env（如 MARIADB_*），
+        并将 _mariadb 放入 input_params，与 execute_sql 一致。
+        """
         payload = {
             "model_type": "python",
             "model_code": code,
             "input_params": input_params or {},
         }
-        return self._run_payload(payload)
+        return self._run_payload(
+            payload,
+            use_network=use_network,
+            container_env=container_env,
+        )
 
