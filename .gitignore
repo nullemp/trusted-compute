@@ -41,3 +41,7 @@ runtime/podman/
 examples/offline_wheels/
 
 *.AppxBundle
+
+backend/results/*
+backend/workspace/python_sandboxes/*
+backend/workspaces/*

@@ -537,26 +537,24 @@ async def api_import_and_run_sandbox(
     """
     if not sql_sandbox_exists(sandbox_id):
         return {
+            "CMD": 82,
             "status": 1,
-            "sandbox_id": sandbox_id,
-            "path": "",
-            "error": "仅 SQL 沙箱支持 import-and-run；请先用 type=sql 创建沙箱",
+            "params": {"result_path": "", "error": "仅 SQL 沙箱支持 import-and-run；请先用 type=sql 创建沙箱"},
         }
     # 1. 读取上传文件内容（完全在内存中处理，不再复制到 workspace/sql_sandboxes/）
     try:
         data_content = await data_file.read()
     except Exception as e:
-        return {"status": 1, "sandbox_id": sandbox_id, "path": "", "error": f"读取 data_file 失败: {e}"}
+        return {"CMD": 82, "status": 1, "params": {"result_path": "", "error": f"读取 data_file 失败: {e}"}}
     sql_content = ""
     if model_file is not None:
         try:
             sql_content = (await model_file.read()).decode("utf-8")
         except Exception as e:
             return {
+                "CMD": 82,
                 "status": 1,
-                "sandbox_id": sandbox_id,
-                "path": "",
-                "error": f"读取 model_file 失败: {e}",
+                "params": {"result_path": "", "error": f"读取 model_file 失败: {e}"},
             }
 
     # 2. 在同一个 SQL 沙箱内执行一次计算（等价于 /run 的 SQL 分支，但直接复用内存中的 data_content/sql_content/key_hex，不写入 workspace）
@@ -571,10 +569,9 @@ async def api_import_and_run_sandbox(
     )
     if out.get("status") == "error":
         return {
+            "CMD": 82,
             "status": 1,
-            "sandbox_id": sandbox_id,
-            "path": "",
-            "error": out.get("error", "执行失败"),
+            "params": {"result_path": "", "error": out.get("error", "执行失败")},
         }
     try:
         out_path = _encrypt_and_save_result(
@@ -586,16 +583,14 @@ async def api_import_and_run_sandbox(
         host_path = _to_host_results_path(out_path)
     except Exception as e:
         return {
+            "CMD": 82,
             "status": 1,
-            "sandbox_id": sandbox_id,
-            "path": "",
-            "error": str(e),
+            "params": {"result_path": "", "error": str(e)},
         }
     return {
+        "CMD": 82,
         "status": 0,
-        "sandbox_id": sandbox_id,
-        "path": host_path,
-        "error": "",
+        "params": {"result_path": host_path},
     }
 
 
