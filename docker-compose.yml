@@ -31,8 +31,11 @@ services:
       MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-trusted_compute_root}
       MARIADB_IMAGE: ${MARIADB_IMAGE:-docker.io/library/mariadb:11.2}
       RESULTS_HOST_ROOT: ${RESULTS_HOST_ROOT:-}
+      RESULT_CALLBACK_URL: "http://192.168.64.1:9001/callback"
     volumes:
       - ./backend:/app
+      - ./docs:/app/docs
+      - ./examples:/app/examples
       - /var/run/docker.sock:/var/run/docker.sock
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     networks:

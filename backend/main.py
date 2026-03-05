@@ -8,6 +8,8 @@ import uvicorn
 import json
 import time
 import shutil
+import asyncio
+import urllib.request
 from typing import Any, Dict, List
 
 from schemas import ExecuteSqlRequest, ExecutePythonRequest
@@ -138,6 +140,55 @@ RESULTS_ROOT = os.getenv(
 )
 
 
+def _map_host_path_to_container(path: str) -> str:
+    """
+    将宿主机 Windows 绝对路径粗略映射为容器内路径。
+    - 若已是以 / 开头的 Unix 风格路径，直接返回（认为已是容器路径）。
+    - 若包含 trusted-compute\\trusted-compute 片段，则将该片段之前的部分去掉，
+      并挂载到 backend 所在目录下：
+      例如: D:\\develop\\trusted-compute\\trusted-compute\\examples\\data\\foo.bin
+      在容器内 backend/main.py 通常位于 <root>/backend/main.py，
+      则映射为: <root>/backend/examples/data/foo.bin
+    - 其他情况原样返回，交由后续 open() 报错。
+    """
+    if not path:
+        return path
+    norm = path.replace("\\", "/")
+    if norm.startswith("/"):
+        return norm
+    lower = norm.lower()
+    marker = "trusted-compute/trusted-compute/"
+    idx = lower.find(marker)
+    if idx != -1:
+        rel = norm[idx + len(marker) :]
+        backend_root = os.path.abspath(os.path.dirname(__file__))
+        mapped = os.path.join(os.path.dirname(backend_root), "backend", rel)
+
+        # #region agent log
+        try:
+            import json as _json, time as _time
+
+            log_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "debug-5a08d1.log"))
+            payload = {
+                "sessionId": "5a08d1",
+                "id": f"log_{int(_time.time() * 1000)}",
+                "timestamp": int(_time.time() * 1000),
+                "runId": "pre-fix",
+                "hypothesisId": "H-path-map",
+                "location": "backend/main.py:_map_host_path_to_container",
+                "message": "path mapping",
+                "data": {"input": path, "normalized": norm, "mapped": mapped},
+            }
+            with open(log_path, "a", encoding="utf-8") as f:
+                f.write(_json.dumps(payload, ensure_ascii=False) + "\n")
+        except Exception:
+            pass
+        # #endregion
+
+        return mapped
+    return norm
+
+
 def _to_host_results_path(path: str) -> str:
     """
     将容器内的结果文件绝对路径（位于 RESULTS_ROOT 下）映射为宿主机上的绝对路径。
@@ -156,6 +207,32 @@ def _to_host_results_path(path: str) -> str:
         return path
     rel = os.path.relpath(abs_path, results_root_abs)
     return os.path.join(host_root, rel)
+
+
+# 执行成功（CMD:82）后，将同一份 JSON 转发到此 URL（POST JSON body）。不设或为空则不转发。
+RESULT_CALLBACK_URL = (os.getenv("RESULT_CALLBACK_URL") or "").strip() or "http://127.0.0.1:13561"
+
+
+def _send_result_callback_sync(url: str, payload: Dict[str, Any]) -> None:
+    """同步 POST 将 payload 以 JSON 形式发送到 url，失败静默忽略。"""
+    try:
+        data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        req = urllib.request.Request(
+            url,
+            data=data,
+            method="POST",
+            headers={"Content-Type": "application/json"},
+        )
+        urllib.request.urlopen(req, timeout=10)
+    except Exception:
+        pass
+
+
+def _notify_result_callback(response: Dict[str, Any]) -> None:
+    """若 RESULT_CALLBACK_URL 已配置，在后台将 response 以 POST JSON 形式发送到该 URL。"""
+    if not RESULT_CALLBACK_URL:
+        return
+    asyncio.create_task(asyncio.to_thread(_send_result_callback_sync, RESULT_CALLBACK_URL, response))
 
 
 def _mariadb_connection_for_sandbox(db_sandbox_id: str):
@@ -394,13 +471,14 @@ async def api_run_sandbox(
                     "error": str(e),
                 },
             }
-        return {
+        response = {
             "CMD": 82,
             "status": 0,
-            "params": {
-                "result_path": host_path,
-            },
+            "params": {"result_path": host_path},
         }
+        _notify_result_callback(response)
+        await asyncio.sleep(5)
+        return response
 
     # 其余类型目前不支持 SQL + 导入一体化执行
     if not python_sandbox_exists(sandbox_id):
@@ -587,11 +665,105 @@ async def api_import_and_run_sandbox(
             "status": 1,
             "params": {"result_path": "", "error": str(e)},
         }
-    return {
+    response = {
         "CMD": 82,
         "status": 0,
         "params": {"result_path": host_path},
     }
+    _notify_result_callback(response)
+    await asyncio.sleep(5)
+    return response
+
+
+@app.get("/api/sandboxes/{sandbox_id}/import-and-run")
+async def api_import_and_run_sandbox_get(
+    sandbox_id: str,
+    data_path: str = Query(..., description="宿主机或容器内的加密数据文件路径"),
+    model_path: str | None = Query(None, description="宿主机或容器内的 SQL 脚本路径；为空时仅导入并全库导出"),
+    key_hex: str = Query(..., description="明文密钥 16 字节 hex，与加密数据文件一致"),
+):
+    """
+    GET 版本的一步「导入 + 执行」接口，仅接受本机文件路径。
+    - 第一步快速响应：仅校验 data_path / model_path 是否可读，成功则返回 {"code":200,"data":"recv success"}，
+      失败则返回 {"code":500,"data":"读取 data_path/model_path 失败: ..."}。
+    - 后台异步任务中完成 SQL 执行与结果加密，并通过 _notify_result_callback 发送 CMD=82 的 HTTP 回调。
+    """
+    if not sql_sandbox_exists(sandbox_id):
+        return {
+            "code": 500,
+            "data": "仅 SQL 沙箱支持 import-and-run；请先用 type=sql 创建沙箱",
+        }
+
+    # 1. 尝试读取 data_path
+    mapped_data_path = _map_host_path_to_container(data_path)
+    try:
+        with open(mapped_data_path, "rb") as f:
+            data_content = f.read()
+    except Exception as e:
+        return {
+            "code": 500,
+            "data": f"读取 data_path 失败: {e}",
+        }
+
+    # 2. 尝试读取 model_path（可选）
+    sql_content = ""
+    if model_path:
+        try:
+            mapped_model_path = _map_host_path_to_container(model_path)
+            with open(mapped_model_path, "r", encoding="utf-8") as f:
+                sql_content = f.read()
+        except Exception as e:
+            return {
+                "code": 500,
+                "data": f"读取 model_path 失败: {e}",
+            }
+
+    # 3. 启动后台任务：在同一个 SQL 沙箱内执行一次计算并通过回调发送结果
+    async def _run_job():
+        import base64
+
+        cipher_b64 = base64.b64encode(data_content).decode("ascii")
+        out = sandbox_service.execute_sql(
+            sandbox_id=sandbox_id,
+            sql=sql_content,
+            cipher_b64=cipher_b64,
+            key_hex=key_hex,
+        )
+        if out.get("status") == "error":
+            response = {
+                "CMD": 82,
+                "status": 1,
+                "params": {"result_path": "", "error": out.get("error", "执行失败")},
+            }
+            await asyncio.sleep(5)
+            _notify_result_callback(response)
+            return
+        try:
+            out_path = _encrypt_and_save_result(
+                result_obj=out,
+                sandbox_id=sandbox_id,
+                data_content=data_content,
+                key_hex=key_hex,
+            )
+            host_path = _to_host_results_path(out_path)
+            response = {
+                "CMD": 82,
+                "status": 0,
+                "params": {"result_path": host_path},
+            }
+        except Exception as e:
+            response = {
+                "CMD": 82,
+                "status": 1,
+                "params": {"result_path": "", "error": str(e)},
+            }
+        await asyncio.sleep(5)
+        _notify_result_callback(response)
+
+    asyncio.create_task(_run_job())
+
+    # 4. 立即返回第一步响应
+    return {"code": 200, "data": "recv success"}
 
 
 @app.post("/api/execute-sql")
